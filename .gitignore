@@ -1,0 +1,10 @@
+#Environment variables
+.env
+*.tfvars
+terraform.tfstate
+terraform.tfstate.backup
+.terraform/
+*.pem
+*.key
+node_modules/
+.DS_Store
