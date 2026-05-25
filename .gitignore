@@ -1,4 +1,3 @@
-#Evnironment variables
 .env
 *.tfvars
 terraform.tfstate
