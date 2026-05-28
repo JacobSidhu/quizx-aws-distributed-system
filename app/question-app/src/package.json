@@ -1,0 +1,23 @@
+{
+  "name": "question-app",
+  "version": "1.0.0",
+  "description": "",
+  "homepage": "https://github.com/jacobsidhu/quizx-aws-distribution-system#readme",
+  "bugs": {
+    "url": "https://github.com/jacobsidhu/quizx-aws-distribution-system/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jacobsidhu/quizx-aws-distribution-system.git"
+  },
+  "license": "ISC",
+  "author": "jacobsidhu",
+  "type": "commonjs",
+  "main": "index.js",
+  "scripts": {
+    "start": "node --env-file=.env server.js"
+  },
+  "dependencies": {
+    "express": "^5.2.1"
+  }
+}
