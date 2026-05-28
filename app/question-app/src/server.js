@@ -27,6 +27,7 @@ app.get('/questions/:category', (req, res) => {
   });
 });
 
+// Start the server
 app.listen(PORT, () => {
   console.log(`Question app running on port ${PORT}`);
 });
