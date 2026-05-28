@@ -1,35 +1,64 @@
 const express = require('express');
 const path = require('path');
+const config = require('./config');
+const mysql = require('./db');
 
 const app = express();
-
-const PORT = process.env.PORT || 3000;
-const data = require('./data.json');
+const PUBLIC_DIR = path.join(__dirname, '../public');
 
 app.use(express.json());
+app.use(express.static(PUBLIC_DIR));
 
-// Serve frontend files from public folder
-app.use(express.static(path.join(__dirname, '../public')));
-
-// Root page
 app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, '../public/index.html'));
+  res.sendFile(path.join(PUBLIC_DIR, 'index.html'));
 });
 
-/**
- * GET /questions/:category
- *
- * Returns one or more random questions from a selected category.
- */
-app.get('/questions/:category', (req, res, next) => {
-  try {
-    if (!data || !Array.isArray(data.categories)) {
-      return res.status(500).json({
-        message: 'Question data is not configured correctly'
-      });
-    }
+app.get('/health', (req, res) => {
+  res.status(200).json({
+    status: 'ok',
+    app: config.app.name,
+    version: config.app.version
+  });
+});
 
-    const requestedCategory = req.params.category?.toLowerCase();
+app.get('/ready', checkDatabaseReadiness);
+app.get('/db/health', checkDatabaseReadiness);
+
+async function checkDatabaseReadiness(req, res, next) {
+  try {
+    await mysql.query('SELECT 1');
+
+    res.status(200).json({
+      status: 'ok',
+      database: config.db.name
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+app.get('/docs', (req, res) => {
+  res.status(200).json({
+    openapi: '3.0.0',
+    info: {
+      title: 'QuizX Question App API',
+      version: config.app.version
+    },
+    endpoints: {
+      'GET /health': 'Returns process health.',
+      'GET /ready': 'Checks database connectivity.',
+      'GET /categories': 'Returns all available quiz categories.',
+      'GET /questions/:category?count=5': 'Returns random questions without answers.'
+    },
+    limits: {
+      maxQuestionCount: config.app.maxQuestionCount
+    }
+  });
+});
+
+app.get('/questions/:category', async (req, res, next) => {
+  try {
+    const requestedCategory = normalizeText(req.params.category).toLowerCase();
 
     if (!requestedCategory) {
       return res.status(400).json({
@@ -37,49 +66,65 @@ app.get('/questions/:category', (req, res, next) => {
       });
     }
 
-    const selectedCategory = data.categories.find((item) => {
-      return item.category.toLowerCase() === requestedCategory;
-    });
+    const [categories] = await mysql.query(
+      'SELECT id, name FROM categories WHERE LOWER(name) = LOWER(?) LIMIT 1',
+      [requestedCategory]
+    );
+    const selectedCategory = categories[0];
 
     if (!selectedCategory) {
       return res.status(404).json({
         message: 'Category not found',
-        availableCategories: data.categories.map((item) => item.category)
+        availableCategories: await getCategoryNames()
       });
     }
 
-    if (
-      !Array.isArray(selectedCategory.questions) ||
-      selectedCategory.questions.length === 0
-    ) {
+    const count = normalizeQuestionCount(req.query.count);
+
+    const [questions] = await mysql.query(
+      `
+        SELECT id, question_text
+        FROM questions
+        WHERE category_id = ?
+        ORDER BY RAND()
+        LIMIT ?
+      `,
+      [selectedCategory.id, count]
+    );
+
+    if (questions.length === 0) {
       return res.status(404).json({
         message: 'No questions found for this category'
       });
     }
 
-    let count = parseInt(req.query.count, 10);
+    const questionIds = questions.map((question) => question.id);
+    const optionPlaceholders = questionIds.map(() => '?').join(', ');
+    const [options] = await mysql.query(
+      `
+        SELECT question_id, option_text
+        FROM question_options
+        WHERE question_id IN (${optionPlaceholders})
+        ORDER BY id
+      `,
+      questionIds
+    );
+    const optionsByQuestionId = options.reduce((result, option) => {
+      result[option.question_id] = result[option.question_id] || [];
+      result[option.question_id].push(option.option_text);
 
-    if (!count || count < 1) {
-      count = 1;
-    }
+      return result;
+    }, {});
 
-    const finalCount = Math.min(count, selectedCategory.questions.length);
-
-    const shuffledQuestions = [...selectedCategory.questions].sort(() => {
-      return Math.random() - 0.5;
-    });
-
-    const selectedQuestions = shuffledQuestions.slice(0, finalCount);
-
-    const safeQuestions = selectedQuestions.map((question) => {
+    const safeQuestions = questions.map((question) => {
       return {
-        question: question.question,
-        options: question.options
+        question: question.question_text,
+        options: optionsByQuestionId[question.id] || []
       };
     });
 
     res.status(200).json({
-      category: selectedCategory.category,
+      category: selectedCategory.name,
       requestedCount: count,
       returnedCount: safeQuestions.length,
       questions: safeQuestions
@@ -89,37 +134,22 @@ app.get('/questions/:category', (req, res, next) => {
   }
 });
 
-/**
- * GET /categories
- *
- * Returns all available quiz categories.
- */
-app.get('/categories', (req, res, next) => {
+app.get('/categories', async (req, res, next) => {
   try {
-    if (!data || !Array.isArray(data.categories)) {
-      return res.status(500).json({
-        message: 'Category data is not configured correctly'
-      });
-    }
-
-    const categories = data.categories.map((item) => item.category);
-
     res.status(200).json({
-      categories: categories
+      categories: await getCategoryNames()
     });
   } catch (error) {
     next(error);
   }
 });
 
-// Handle unknown routes
 app.use((req, res) => {
   res.status(404).json({
     message: 'Route not found'
   });
 });
 
-// Global error handler
 app.use((error, req, res, next) => {
   console.error(error);
 
@@ -128,6 +158,43 @@ app.use((error, req, res, next) => {
   });
 });
 
-app.listen(PORT, () => {
-  console.log(`Question app running on port ${PORT}`);
+async function getCategoryNames() {
+  const [categories] = await mysql.query(
+    'SELECT name FROM categories ORDER BY name'
+  );
+
+  return categories.map((item) => item.name);
+}
+
+function normalizeQuestionCount(value) {
+  const count = parseInt(value, 10);
+
+  if (!count || count < 1) {
+    return 1;
+  }
+
+  return Math.min(count, config.app.maxQuestionCount);
+}
+
+function normalizeText(value) {
+  return typeof value === 'string' ? value.trim() : '';
+}
+
+async function shutdown(server) {
+  server.close(async () => {
+    try {
+      await mysql.end();
+      process.exit(0);
+    } catch (error) {
+      console.error(error);
+      process.exit(1);
+    }
+  });
+}
+
+const server = app.listen(config.app.port, () => {
+  console.log(`${config.app.name} running on port ${config.app.port}`);
 });
+
+process.on('SIGINT', () => shutdown(server));
+process.on('SIGTERM', () => shutdown(server));
