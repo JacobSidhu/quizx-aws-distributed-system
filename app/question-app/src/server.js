@@ -4,7 +4,7 @@ const path = require('path');
 const app = express();
 
 const PORT = process.env.PORT || 3000;
-const data = require('../../data.json');
+const data = require('./data.json');
 
 app.use(express.json());
 
