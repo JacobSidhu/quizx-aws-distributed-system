@@ -1,0 +1,844 @@
+{
+    "categories": [
+        {
+            "category": "General Knowledge",
+            "questions": [
+                {
+                    "question": "What is the capital of France?",
+                    "options": [
+                        "Berlin",
+                        "Madrid",
+                        "Paris",
+                        "Rome"
+                    ],
+                    "answer": "Paris"
+                },
+                {
+                    "question": "Who wrote 'To Kill a Mockingbird'?",
+                    "options": [
+                        "Harper Lee",
+                        "Mark Twain",
+                        "Ernest Hemingway",
+                        "F. Scott Fitzgerald"
+                    ],
+                    "answer": "Harper Lee"
+                },
+                {
+                    "question": "What is the largest planet in our solar system?",
+                    "options": [
+                        "Earth",
+                        "Jupiter",
+                        "Mars",
+                        "Saturn"
+                    ],
+                    "answer": "Jupiter"
+                },
+                {
+                    "question": "What is the chemical symbol for water?",
+                    "options": [
+                        "H2O",
+                        "O2",
+                        "CO2",
+                        "NaCl"
+                    ],
+                    "answer": "H2O"
+                },
+                {
+                    "question": "Who painted the Mona Lisa?",
+                    "options": [
+                        "Leonardo da Vinci",
+                        "Pablo Picasso",
+                        "Vincent van Gogh",
+                        "Claude Monet"
+                    ],
+                    "answer": "Leonardo da Vinci"
+                }
+            ]
+        },
+        {
+            "category": "Literature",
+            "questions": [
+                {
+                    "question": "Who wrote '1984'?",
+                    "options": [
+                        "George Orwell",
+                        "Aldous Huxley",
+                        "Ray Bradbury",
+                        "J.R.R. Tolkien"
+                    ],
+                    "answer": "George Orwell"
+                },
+                {
+                    "question": "Which poet wrote 'The Road Not Taken'?",
+                    "options": [
+                        "Robert Frost",
+                        "Emily Dickinson",
+                        "T.S. Eliot",
+                        "W.B. Yeats"
+                    ],
+                    "answer": "Robert Frost"
+                },
+                {
+                    "question": "Who is the author of 'Pride and Prejudice'?",
+                    "options": [
+                        "Jane Austen",
+                        "Charlotte Bronte",
+                        "Mary Shelley",
+                        "George Eliot"
+                    ],
+                    "answer": "Jane Austen"
+                },
+                {
+                    "question": "Which novel begins with 'Call me Ishmael'?",
+                    "options": [
+                        "Moby-Dick",
+                        "The Old Man and the Sea",
+                        "Heart of Darkness",
+                        "Treasure Island"
+                    ],
+                    "answer": "Moby-Dick"
+                },
+                {
+                    "question": "Who wrote 'The Catcher in the Rye'?",
+                    "options": [
+                        "J.D. Salinger",
+                        "John Steinbeck",
+                        "Kurt Vonnegut",
+                        "Jack Kerouac"
+                    ],
+                    "answer": "J.D. Salinger"
+                }
+            ]
+        },
+        {
+            "category": "Science",
+            "questions": [
+                {
+                    "question": "What is the chemical symbol for gold?",
+                    "options": [
+                        "Au",
+                        "Ag",
+                        "Fe",
+                        "Pb"
+                    ],
+                    "answer": "Au"
+                },
+                {
+                    "question": "Who proposed the theory of relativity?",
+                    "options": [
+                        "Albert Einstein",
+                        "Isaac Newton",
+                        "Niels Bohr",
+                        "Galileo Galilei"
+                    ],
+                    "answer": "Albert Einstein"
+                },
+                {
+                    "question": "What gas do plants primarily absorb?",
+                    "options": [
+                        "Carbon dioxide",
+                        "Oxygen",
+                        "Nitrogen",
+                        "Helium"
+                    ],
+                    "answer": "Carbon dioxide"
+                },
+                {
+                    "question": "What is the center of an atom called?",
+                    "options": [
+                        "Nucleus",
+                        "Electron",
+                        "Proton",
+                        "Orbital"
+                    ],
+                    "answer": "Nucleus"
+                },
+                {
+                    "question": "What force keeps planets in orbit around the sun?",
+                    "options": [
+                        "Gravity",
+                        "Magnetism",
+                        "Friction",
+                        "Electrostatic"
+                    ],
+                    "answer": "Gravity"
+                }
+            ]
+        },
+        {
+            "category": "History",
+            "questions": [
+                {
+                    "question": "Who was the first President of the United States?",
+                    "options": [
+                        "George Washington",
+                        "Thomas Jefferson",
+                        "Abraham Lincoln",
+                        "John Adams"
+                    ],
+                    "answer": "George Washington"
+                },
+                {
+                    "question": "In which year did World War II end?",
+                    "options": [
+                        "1945",
+                        "1939",
+                        "1918",
+                        "1950"
+                    ],
+                    "answer": "1945"
+                },
+                {
+                    "question": "Which empire built the Colosseum?",
+                    "options": [
+                        "Roman Empire",
+                        "Ottoman Empire",
+                        "British Empire",
+                        "Mongol Empire"
+                    ],
+                    "answer": "Roman Empire"
+                },
+                {
+                    "question": "Who discovered penicillin?",
+                    "options": [
+                        "Alexander Fleming",
+                        "Louis Pasteur",
+                        "Marie Curie",
+                        "Gregor Mendel"
+                    ],
+                    "answer": "Alexander Fleming"
+                },
+                {
+                    "question": "What was the name of the ship on which the Pilgrims sailed to America in 1620?",
+                    "options": [
+                        "Mayflower",
+                        "Santa Maria",
+                        "Endeavour",
+                        "Beagle"
+                    ],
+                    "answer": "Mayflower"
+                }
+            ]
+        },
+        {
+            "category": "Geography",
+            "questions": [
+                {
+                    "question": "Which is the longest river in the world?",
+                    "options": [
+                        "Nile",
+                        "Amazon",
+                        "Yangtze",
+                        "Mississippi"
+                    ],
+                    "answer": "Nile"
+                },
+                {
+                    "question": "Which country has the largest population?",
+                    "options": [
+                        "China",
+                        "India",
+                        "United States",
+                        "Indonesia"
+                    ],
+                    "answer": "China"
+                },
+                {
+                    "question": "Mount Everest is located on the border of Nepal and which country?",
+                    "options": [
+                        "China",
+                        "India",
+                        "Bhutan",
+                        "Pakistan"
+                    ],
+                    "answer": "China"
+                },
+                {
+                    "question": "What is the smallest country by land area?",
+                    "options": [
+                        "Vatican City",
+                        "Monaco",
+                        "Nauru",
+                        "San Marino"
+                    ],
+                    "answer": "Vatican City"
+                },
+                {
+                    "question": "Which ocean is the largest?",
+                    "options": [
+                        "Pacific Ocean",
+                        "Atlantic Ocean",
+                        "Indian Ocean",
+                        "Arctic Ocean"
+                    ],
+                    "answer": "Pacific Ocean"
+                }
+            ]
+        },
+        {
+            "category": "Art",
+            "questions": [
+                {
+                    "question": "Who painted 'Starry Night'?",
+                    "options": [
+                        "Vincent van Gogh",
+                        "Pablo Picasso",
+                        "Claude Monet",
+                        "Salvador Dalí"
+                    ],
+                    "answer": "Vincent van Gogh"
+                },
+                {
+                    "question": "Which art movement is Andy Warhol associated with?",
+                    "options": [
+                        "Pop Art",
+                        "Impressionism",
+                        "Surrealism",
+                        "Cubism"
+                    ],
+                    "answer": "Pop Art"
+                },
+                {
+                    "question": "The sculpture 'David' was created by which artist?",
+                    "options": [
+                        "Michelangelo",
+                        "Donatello",
+                        "Bernini",
+                        "Rodin"
+                    ],
+                    "answer": "Michelangelo"
+                },
+                {
+                    "question": "Which technique uses small dots to create an image?",
+                    "options": [
+                        "Pointillism",
+                        "Fresco",
+                        "Collage",
+                        "Etching"
+                    ],
+                    "answer": "Pointillism"
+                },
+                {
+                    "question": "Which painter is famous for the mural 'Guernica'?",
+                    "options": [
+                        "Pablo Picasso",
+                        "Diego Rivera",
+                        "Frida Kahlo",
+                        "Joan Miró"
+                    ],
+                    "answer": "Pablo Picasso"
+                }
+            ]
+        },
+        {
+            "category": "Sports",
+            "questions": [
+                {
+                    "question": "How many players are there in a soccer team on the field?",
+                    "options": [
+                        "11",
+                        "10",
+                        "9",
+                        "12"
+                    ],
+                    "answer": "11"
+                },
+                {
+                    "question": "In which sport is the term 'love' used?",
+                    "options": [
+                        "Tennis",
+                        "Cricket",
+                        "Football",
+                        "Basketball"
+                    ],
+                    "answer": "Tennis"
+                },
+                {
+                    "question": "Which country won the FIFA World Cup in 2018?",
+                    "options": [
+                        "France",
+                        "Croatia",
+                        "Brazil",
+                        "Germany"
+                    ],
+                    "answer": "France"
+                },
+                {
+                    "question": "In which sport would you perform a slam dunk?",
+                    "options": [
+                        "Basketball",
+                        "Volleyball",
+                        "Handball",
+                        "Rugby"
+                    ],
+                    "answer": "Basketball"
+                },
+                {
+                    "question": "How many minutes is a standard professional soccer match (excluding stoppage time)?",
+                    "options": [
+                        "90",
+                        "80",
+                        "120",
+                        "60"
+                    ],
+                    "answer": "90"
+                }
+            ]
+        },
+        {
+            "category": "Music",
+            "questions": [
+                {
+                    "question": "Who is known as the 'King of Pop'?",
+                    "options": [
+                        "Michael Jackson",
+                        "Elvis Presley",
+                        "Prince",
+                        "Madonna"
+                    ],
+                    "answer": "Michael Jackson"
+                },
+                {
+                    "question": "Which instrument has 88 keys?",
+                    "options": [
+                        "Piano",
+                        "Violin",
+                        "Guitar",
+                        "Flute"
+                    ],
+                    "answer": "Piano"
+                },
+                {
+                    "question": "Which band released 'Hey Jude'?",
+                    "options": [
+                        "The Beatles",
+                        "The Rolling Stones",
+                        "Queen",
+                        "The Who"
+                    ],
+                    "answer": "The Beatles"
+                },
+                {
+                    "question": "Which musical symbol indicates to play softly?",
+                    "options": [
+                        "p (piano)",
+                        "f (forte)",
+                        "mf (mezzo-forte)",
+                        "ff (fortissimo)"
+                    ],
+                    "answer": "p (piano)"
+                },
+                {
+                    "question": "Which composer wrote the 'Fifth Symphony' often called 'Beethoven's Fifth'?",
+                    "options": [
+                        "Ludwig van Beethoven",
+                        "Johann Sebastian Bach",
+                        "Wolfgang Amadeus Mozart",
+                        "Franz Schubert"
+                    ],
+                    "answer": "Ludwig van Beethoven"
+                }
+            ]
+        },
+        {
+            "category": "Technology",
+            "questions": [
+                {
+                    "question": "What does 'HTTP' stand for?",
+                    "options": [
+                        "HyperText Transfer Protocol",
+                        "High Transfer Text Protocol",
+                        "Hyperlink Transfer Protocol",
+                        "HyperText Transmission Program"
+                    ],
+                    "answer": "HyperText Transfer Protocol"
+                },
+                {
+                    "question": "Who is credited with inventing the World Wide Web?",
+                    "options": [
+                        "Tim Berners-Lee",
+                        "Bill Gates",
+                        "Steve Jobs",
+                        "Vint Cerf"
+                    ],
+                    "answer": "Tim Berners-Lee"
+                },
+                {
+                    "question": "What does 'CPU' stand for?",
+                    "options": [
+                        "Central Processing Unit",
+                        "Computer Personal Unit",
+                        "Central Program Unit",
+                        "Control Processing Unit"
+                    ],
+                    "answer": "Central Processing Unit"
+                },
+                {
+                    "question": "Which company developed the Android operating system?",
+                    "options": [
+                        "Google",
+                        "Apple",
+                        "Microsoft",
+                        "Samsung"
+                    ],
+                    "answer": "Google"
+                },
+                {
+                    "question": "What is 'AI' short for?",
+                    "options": [
+                        "Artificial Intelligence",
+                        "Automated Input",
+                        "Analog Interface",
+                        "Advanced Internet"
+                    ],
+                    "answer": "Artificial Intelligence"
+                }
+            ]
+        },
+        {
+            "category": "Mathematics",
+            "questions": [
+                {
+                    "question": "What is the value of pi to two decimal places?",
+                    "options": [
+                        "3.14",
+                        "2.72",
+                        "1.62",
+                        "3.41"
+                    ],
+                    "answer": "3.14"
+                },
+                {
+                    "question": "What is 7 x 8?",
+                    "options": [
+                        "56",
+                        "48",
+                        "64",
+                        "49"
+                    ],
+                    "answer": "56"
+                },
+                {
+                    "question": "What is the square root of 81?",
+                    "options": [
+                        "9",
+                        "8",
+                        "7",
+                        "6"
+                    ],
+                    "answer": "9"
+                },
+                {
+                    "question": "What is the formula for the area of a circle?",
+                    "options": [
+                        "πr^2",
+                        "2πr",
+                        "πd",
+                        "r^2"
+                    ],
+                    "answer": "πr^2"
+                },
+                {
+                    "question": "If x + 2 = 5, what is x?",
+                    "options": [
+                        "3",
+                        "2",
+                        "5",
+                        "7"
+                    ],
+                    "answer": "3"
+                }
+            ]
+        },
+        {
+            "category": "Movies",
+            "questions": [
+                {
+                    "question": "Which movie features the character 'Forrest Gump'?",
+                    "options": [
+                        "Forrest Gump",
+                        "Cast Away",
+                        "Saving Private Ryan",
+                        "The Green Mile"
+                    ],
+                    "answer": "Forrest Gump"
+                },
+                {
+                    "question": "Who directed 'Jurassic Park'?",
+                    "options": [
+                        "Steven Spielberg",
+                        "James Cameron",
+                        "Ridley Scott",
+                        "Christopher Nolan"
+                    ],
+                    "answer": "Steven Spielberg"
+                },
+                {
+                    "question": "Which film won Best Picture at the 1998 Oscars (for 1997 films)?",
+                    "options": [
+                        "Titanic",
+                        "Good Will Hunting",
+                        "L.A. Confidential",
+                        "The Full Monty"
+                    ],
+                    "answer": "Titanic"
+                },
+                {
+                    "question": "Which actor played Jack Dawson in 'Titanic'?",
+                    "options": [
+                        "Leonardo DiCaprio",
+                        "Brad Pitt",
+                        "Tom Cruise",
+                        "Matt Damon"
+                    ],
+                    "answer": "Leonardo DiCaprio"
+                },
+                {
+                    "question": "Which movie popularized the quote 'May the Force be with you'?",
+                    "options": [
+                        "Star Wars",
+                        "Star Trek",
+                        "The Matrix",
+                        "Alien"
+                    ],
+                    "answer": "Star Wars"
+                }
+            ]
+        },
+        {
+            "category": "Nature",
+            "questions": [
+                {
+                    "question": "What is the largest mammal?",
+                    "options": [
+                        "Blue whale",
+                        "Elephant",
+                        "Giraffe",
+                        "Hippopotamus"
+                    ],
+                    "answer": "Blue whale"
+                },
+                {
+                    "question": "What do bees produce?",
+                    "options": [
+                        "Honey",
+                        "Milk",
+                        "Silk",
+                        "Wax"
+                    ],
+                    "answer": "Honey"
+                },
+                {
+                    "question": "Which biome is characterized by very low temperatures and permafrost?",
+                    "options": [
+                        "Tundra",
+                        "Desert",
+                        "Rainforest",
+                        "Savanna"
+                    ],
+                    "answer": "Tundra"
+                },
+                {
+                    "question": "What is the process by which plants make food using sunlight?",
+                    "options": [
+                        "Photosynthesis",
+                        "Respiration",
+                        "Transpiration",
+                        "Fermentation"
+                    ],
+                    "answer": "Photosynthesis"
+                },
+                {
+                    "question": "Which animal is known as the 'King of the Jungle'?",
+                    "options": [
+                        "Lion",
+                        "Tiger",
+                        "Elephant",
+                        "Leopard"
+                    ],
+                    "answer": "Lion"
+                }
+            ]
+        },
+        {
+            "category": "Politics",
+            "questions": [
+                {
+                    "question": "How many branches are there in the United States government?",
+                    "options": [
+                        "Three",
+                        "Two",
+                        "Four",
+                        "One"
+                    ],
+                    "answer": "Three"
+                },
+                {
+                    "question": "What term describes a system where citizens elect representatives?",
+                    "options": [
+                        "Republic",
+                        "Monarchy",
+                        "Dictatorship",
+                        "Oligarchy"
+                    ],
+                    "answer": "Republic"
+                },
+                {
+                    "question": "Which document begins with 'We the People'?",
+                    "options": [
+                        "United States Constitution",
+                        "Declaration of Independence",
+                        "Bill of Rights",
+                        "Magna Carta"
+                    ],
+                    "answer": "United States Constitution"
+                },
+                {
+                    "question": "Which international body has the five permanent Security Council members?",
+                    "options": [
+                        "United Nations",
+                        "European Union",
+                        "NATO",
+                        "World Bank"
+                    ],
+                    "answer": "United Nations"
+                },
+                {
+                    "question": "What is the term for the official written record of a legislative body?",
+                    "options": [
+                        "Proceedings",
+                        "Manifesto",
+                        "Treaty",
+                        "Charter"
+                    ],
+                    "answer": "Proceedings"
+                }
+            ]
+        },
+        {
+            "category": "Food & Drink",
+            "questions": [
+                {
+                    "question": "Which country is sushi traditionally from?",
+                    "options": [
+                        "Japan",
+                        "China",
+                        "Korea",
+                        "Thailand"
+                    ],
+                    "answer": "Japan"
+                },
+                {
+                    "question": "What ingredient makes bread rise?",
+                    "options": [
+                        "Yeast",
+                        "Salt",
+                        "Sugar",
+                        "Butter"
+                    ],
+                    "answer": "Yeast"
+                },
+                {
+                    "question": "Which fruit is used to make guacamole?",
+                    "options": [
+                        "Avocado",
+                        "Mango",
+                        "Banana",
+                        "Tomato"
+                    ],
+                    "answer": "Avocado"
+                },
+                {
+                    "question": "What is the main ingredient in hummus?",
+                    "options": [
+                        "Chickpeas",
+                        "Lentils",
+                        "Potatoes",
+                        "Carrots"
+                    ],
+                    "answer": "Chickpeas"
+                },
+                {
+                    "question": "Which beverage is made from fermented grapes?",
+                    "options": [
+                        "Wine",
+                        "Beer",
+                        "Vodka",
+                        "Whiskey"
+                    ],
+                    "answer": "Wine"
+                }
+            ]
+        },
+        {
+            "category": "Languages",
+            "questions": [
+                {
+                    "question": "What is the most widely spoken language in the world by number of native speakers?",
+                    "options": [
+                        "Mandarin Chinese",
+                        "English",
+                        "Spanish",
+                        "Hindi"
+                    ],
+                    "answer": "Mandarin Chinese"
+                },
+                {
+                    "question": "Which language is primarily spoken in Brazil?",
+                    "options": [
+                        "Portuguese",
+                        "Spanish",
+                        "French",
+                        "English"
+                    ],
+                    "answer": "Portuguese"
+                },
+                {
+                    "question": "What language uses the Cyrillic alphabet?",
+                    "options": [
+                        "Russian",
+                        "Greek",
+                        "Arabic",
+                        "Hebrew"
+                    ],
+                    "answer": "Russian"
+                },
+                {
+                    "question": "Which language is the lingua franca of international air traffic?",
+                    "options": [
+                        "English",
+                        "French",
+                        "Spanish",
+                        "German"
+                    ],
+                    "answer": "English"
+                },
+                {
+                    "question": "What is the official language of Egypt?",
+                    "options": [
+                        "Arabic",
+                        "English",
+                        "French",
+                        "Spanish"
+                    ],
+                    "answer": "Arabic"
+                }
+            ]
+        },
+        {
+            "category": "Family",
+            "questions": [
+                {
+                    "question": "Who is the son of the David?",
+                    "options": [
+                        "Jacob",
+                        "Josh",
+                        "Arsh",
+                        "Babblu"
+                    ],
+                    "answer": "Jacob"
+                }
+            ]
+        }
+    ]
+}
