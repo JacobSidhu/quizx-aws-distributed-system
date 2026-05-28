@@ -27,6 +27,14 @@ app.get('/questions/:category', (req, res) => {
   });
 });
 
+app.get('/categories', (req, res) => {
+  const categories = data.categories.map((item) => item.category);
+
+  res.json({
+    categories: categories
+  });
+});
+
 // Start the server
 app.listen(PORT, () => {
   console.log(`Question app running on port ${PORT}`);
