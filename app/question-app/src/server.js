@@ -1,10 +1,20 @@
 const express = require('express');
+const path = require('path');
+
 const app = express();
 
 const PORT = process.env.PORT || 3000;
 const data = require('./data.json');
 
 app.use(express.json());
+
+// Serve frontend files from public folder
+app.use(express.static(path.join(__dirname, '../public')));
+
+// Root page
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, '../public/index.html'));
+});
 
 /**
  * GET /questions/:category
