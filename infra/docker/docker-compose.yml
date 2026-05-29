@@ -1,0 +1,66 @@
+x-app-db-environment: &app-db-environment
+  DB_HOST: mysql
+  DB_PORT: 3306
+  DB_USER: quizx_app
+  DB_PASSWORD: quizx_app_password
+  DB_NAME: quizx
+
+services:
+  mysql:
+    image: mysql:8.4
+    container_name: quizx-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: quizx_root_password
+      MYSQL_DATABASE: quizx
+      MYSQL_USER: quizx_app
+      MYSQL_PASSWORD: quizx_app_password
+    volumes:
+      - quizx_mysql_data:/var/lib/mysql
+      - ../../database/mysql/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+      - ../../database/mysql/seed.sql:/docker-entrypoint-initdb.d/02-seed.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -u$${MYSQL_USER} -p$${MYSQL_PASSWORD} --silent"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - quizx_backend
+
+  question-app:
+    image: quizx-question-app:latest
+    container_name: quizx-question-app
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      PORT: 4000
+      <<: *app-db-environment
+    ports:
+      - "4000:4000"
+    networks:
+      - quizx_backend
+
+  submit-app:
+    image: quizx-submit-app:latest
+    container_name: quizx-submit-app
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      PORT: 4200
+      <<: *app-db-environment
+    ports:
+      - "4200:4200"
+    networks:
+      - quizx_backend
+
+networks:
+  quizx_backend:
+    name: quizx-docker-network
+    driver: bridge
+
+volumes:
+  quizx_mysql_data:
