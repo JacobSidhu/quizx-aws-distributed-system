@@ -5,7 +5,7 @@
 **Cloud Provider:** AWS  
 **Deployment Model:** Single EC2 instance, Docker Compose, Terraform, GitHub Actions  
 **Question App Prototype:** [Question App v1.0.0 Figma prototype](https://www.figma.com/proto/KCH2RPRIBkATIy3ZgRKi79/Untitled?node-id=1-2&t=SMZubngogai4VlE4-1&scaling=min-zoom&content-scaling=fixed&page-id=0%3A1&starting-point-node-id=1%3A2)  
-**Submit App Prototype:** [QuizX Figma prototype](https://www.figma.com/design/KCH2RPRIBkATIy3ZgRKi79/QuizX?node-id=0-1&t=FiuoqfiE8ia6cDoi-1)
+**Submit App Prototype:** [Submit App v1.0.0 Figma prototype](https://www.figma.com/proto/KCH2RPRIBkATIy3ZgRKi79/QuizX?node-id=0-1&t=1fftyZSMal3CHOug-1)
 
 ---
 
