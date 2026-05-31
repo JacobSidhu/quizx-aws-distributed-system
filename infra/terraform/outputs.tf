@@ -14,8 +14,8 @@ output "ec2_public_dns" {
 }
 
 output "ssh_command" {
-  description = "SSH command for connecting to the EC2 instance. Use ec2-user for Amazon Linux AMIs and ubuntu for Ubuntu AMIs."
-  value       = "ssh -i <private-key-path> ec2-user@${aws_instance.web.public_ip}"
+  description = "SSH command for connecting to the EC2 instance"
+  value       = "ssh -i <private-key-path> ubuntu@${aws_instance.web.public_ip}"
 }
 
 output "question_app_url" {
