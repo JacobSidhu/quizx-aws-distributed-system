@@ -6,6 +6,7 @@ terraform.tfstate.backup
 *.pem
 *.key
 node_modules/
+aws/
 .DS_Store
 package-lock.json
 !app/*/src/package-lock.json
