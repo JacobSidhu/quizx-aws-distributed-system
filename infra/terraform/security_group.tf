@@ -13,11 +13,19 @@ resource "aws_security_group" "quizx_sg" {
   }
 
   ingress {
-    description = "Allow HTTP access to app"
+    description = "Allow HTTP access to question app"
     from_port   = var.question_app_port
     to_port     = var.question_app_port
     protocol    = "tcp"
     cidr_blocks = [var.question_app_cidr]
+  }
+
+  ingress {
+    description = "Allow HTTP access to submit app"
+    from_port   = var.submit_app_port
+    to_port     = var.submit_app_port
+    protocol    = "tcp"
+    cidr_blocks = [var.submit_app_cidr]
   }
 
   egress {
@@ -36,7 +44,7 @@ resource "aws_security_group" "quizx_sg" {
 
 resource "aws_key_pair" "quizx_key" {
   key_name   = "${var.project_name}-ec2-key"
-  public_key = file(var.ssh_public_key_path)
+  public_key = var.ssh_public_key
 
   tags = merge(local.common_tags, {
     Name = "${local.name_prefix}-ec2-key"
