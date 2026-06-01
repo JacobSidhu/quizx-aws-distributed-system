@@ -1,9 +1,3 @@
-variable "aws_profile" {
-  description = "AWS CLI profile to use for authentication"
-  type        = string
-  default     = "default"
-}
-
 variable "project_name" {
   description = "Name used for tagging and naming AWS resources"
   type        = string
@@ -94,9 +88,10 @@ variable "instance_type" {
   default     = "t3.micro"
 }
 
-variable "ssh_public_key_path" {
-  description = "Path to the SSH public key used for EC2 access"
+variable "ssh_public_key" {
+  description = "Public key used for EC2 access"
   type        = string
+  sensitive   = true
 }
 
 variable "aws_ami_id" {
