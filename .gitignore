@@ -8,5 +8,4 @@ terraform.tfstate.backup
 node_modules/
 .DS_Store
 package-lock.json
-data.json
 !app/*/src/package-lock.json
