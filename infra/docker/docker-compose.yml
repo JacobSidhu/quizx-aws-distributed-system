@@ -7,7 +7,10 @@ x-app-db-environment: &app-db-environment
 
 services:
   mysql:
-    image: mysql:8.4
+    build:
+      context: ../../database
+      dockerfile: Dockerfile
+    image: quizx-mysql:latest
     container_name: quizx-mysql
     restart: unless-stopped
     environment:
@@ -17,8 +20,6 @@ services:
       MYSQL_PASSWORD: quizx_app_password
     volumes:
       - quizx_mysql_data:/var/lib/mysql
-      - ../../database/mysql/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
-      - ../../database/mysql/seed.sql:/docker-entrypoint-initdb.d/02-seed.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -u$${MYSQL_USER} -p$${MYSQL_PASSWORD} --silent"]
       interval: 10s
@@ -28,6 +29,9 @@ services:
       - quizx_backend
 
   question-app:
+    build:
+      context: ../../app/question-app
+      dockerfile: Dockerfile
     image: quizx-question-app:latest
     container_name: quizx-question-app
     restart: unless-stopped
@@ -43,6 +47,9 @@ services:
       - quizx_backend
 
   submit-app:
+    build:
+      context: ../../app/submit-app
+      dockerfile: Dockerfile
     image: quizx-submit-app:latest
     container_name: quizx-submit-app
     restart: unless-stopped
