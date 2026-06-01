@@ -1,0 +1,40 @@
+name: Deploy Infrastructure
+
+on:
+  workflow_dispatch:
+
+jobs:
+  terraform-apply:
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: infra/terraform
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: hashicorp/setup-terraform@v3
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Terraform init
+        run: terraform init
+
+      - name: Terraform apply
+        env:
+          TF_VAR_aws_region: ${{ secrets.AWS_REGION }}
+          TF_VAR_allowed_ssh_cidr: ${{ secrets.TF_VAR_ALLOWED_SSH_CIDR }}
+          TF_VAR_question_app_cidr: ${{ secrets.TF_VAR_QUESTION_APP_CIDR }}
+          TF_VAR_submit_app_cidr: ${{ secrets.TF_VAR_SUBMIT_APP_CIDR }}
+          TF_VAR_aws_ami_id: ${{ secrets.TF_VAR_AWS_AMI_ID }}
+          TF_VAR_ssh_public_key: ${{ secrets.TF_VAR_SSH_PUBLIC_KEY }}
+          TF_VAR_public_route_config: '{ cidr_block = "0.0.0.0/0" }'
+          TF_VAR_ssh_port: 22
+          TF_VAR_question_app_port: 4000
+          TF_VAR_submit_app_port: 4200
+        run: terraform apply -auto-approve
