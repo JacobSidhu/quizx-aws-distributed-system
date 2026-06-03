@@ -85,9 +85,6 @@ jobs:
             terraform import "$address" "$id"
           }
 
-          key_name="quizx-ec2-key"
-          import_if_missing aws_key_pair.quizx_key "$key_name"
-
           sg_id="$(aws ec2 describe-security-groups \
             --filters "Name=group-name,Values=quizx-sg" "Name=tag:Name,Values=quizx-web" \
             --query 'SecurityGroups[0].GroupId' \
