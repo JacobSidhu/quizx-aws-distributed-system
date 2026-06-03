@@ -156,7 +156,7 @@ jobs:
 
     env:
       EC2_HOST: ${{ needs.terraform.outputs.ec2_public_ip }}
-      EC2_USERNAME: ${{ secrets.EC2_USERNAME || 'ubuntu' }}
+      EC2_USERNAME: ${{ secrets.EC2_USERNAME}}
 
     steps:
       - uses: actions/checkout@v4
