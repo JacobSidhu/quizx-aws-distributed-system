@@ -19,3 +19,6 @@ jobs:
 
       - name: Initialize Terraform
         run: terraform init
+
+      - name: Format Terraform code
+        run: terraform fmt -check
