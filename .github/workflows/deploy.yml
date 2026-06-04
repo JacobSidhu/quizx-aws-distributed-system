@@ -1,6 +1,16 @@
 name: Deploy
 
-on: workflow_dispatch
+on:
+  workflow_dispatch:
+    inputs:
+      terraform_action:
+        description: "Terraform action to run"
+        required: true
+        default: "apply"
+        type: choice
+        options:
+          - apply
+          - destroy
 
 jobs:
   terraform:
