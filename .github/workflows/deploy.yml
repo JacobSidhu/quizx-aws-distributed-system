@@ -46,3 +46,7 @@ jobs:
           TF_VAR_ssh_port: 22
           TF_VAR_question_app_port: 4000
           TF_VAR_submit_app_port: 4200
+          
+      - name: Apply Terraform deployment
+        run: terraform apply -auto-approve tfplan
+        
