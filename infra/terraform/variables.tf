@@ -99,3 +99,9 @@ variable "aws_ami_id" {
   type        = string
   default     = null
 }
+
+variable "tf_state_bucket_name" {
+  description = "Name of the S3 bucket for Terraform state storage"
+  type        = string
+  default     = "quizx-terraform-state-2026"
+}
