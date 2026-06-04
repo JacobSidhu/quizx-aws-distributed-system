@@ -8,6 +8,8 @@ resource "aws_instance" "web" {
 
   key_name = aws_key_pair.quizx_key.key_name
 
+  user_data = file("${path.module}/user-data.sh")
+
   tags = {
     Name = "${var.project_name}-web"
   }
