@@ -25,3 +25,17 @@ jobs:
 
       - name: Validate Terraform configuration
         run: terraform validate
+
+      - name: Plan Terraform deployment
+        run: terraform plan -out=tfplan
+        env:
+          TF_VAR_aws_region: ${{ secrets.AWS_REGION }}
+          TF_VAR_allowed_ssh_cidr: ${{ secrets.ALLOWED_SSH_CIDR }}
+          TF_VAR_question_app_cidr: ${{ secrets.QUESTION_APP_CIDR }}
+          TF_VAR_submit_app_cidr: ${{ secrets.SUBMIT_APP_CIDR }}
+          TF_VAR_aws_ami_id: ${{ secrets.AWS_AMI_ID }}
+          TF_VAR_ssh_public_key: ${{ secrets.SSH_PUBLIC_KEY }}
+          TF_VAR_public_route_config: '{ cidr_block = "0.0.0.0/0" }'
+          TF_VAR_ssh_port: 22
+          TF_VAR_question_app_port: 4000
+          TF_VAR_submit_app_port: 4200
