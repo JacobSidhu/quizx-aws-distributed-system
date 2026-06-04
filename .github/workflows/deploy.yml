@@ -75,3 +75,86 @@ jobs:
 
       - name: Run Terraform action
         run: terraform apply -auto-approve tfplan
+
+      - name: Read Terraform outputs
+        if: ${{ github.event.inputs.terraform_action == 'apply' }}
+        id: terraform_outputs
+        run: |
+          echo "ec2_public_ip=$(terraform output -raw ec2_public_ip)" >> "$GITHUB_OUTPUT"
+          echo "question_app_url=$(terraform output -raw question_app_url)" >> "$GITHUB_OUTPUT"
+          echo "submit_app_url=$(terraform output -raw submit_app_url)" >> "$GITHUB_OUTPUT"
+
+      - name: Configure SSH
+        if: ${{ github.event.inputs.terraform_action == 'apply' }}
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "${{ secrets.EC2_SSH_PRIVATE_KEY }}" > ~/.ssh/quizx-ec2-key
+          chmod 600 ~/.ssh/quizx-ec2-key
+          cat > ~/.ssh/config <<EOF
+          Host quizx-ec2
+            HostName ${{ steps.terraform_outputs.outputs.ec2_public_ip }}
+            User ubuntu
+            IdentityFile ~/.ssh/quizx-ec2-key
+            StrictHostKeyChecking no
+            UserKnownHostsFile /dev/null
+          EOF
+
+      - name: Wait for EC2 Docker readiness
+        if: ${{ github.event.inputs.terraform_action == 'apply' }}
+        run: |
+          for attempt in {1..30}; do
+            if ssh quizx-ec2 'echo "SSH ready"'; then
+              break
+            fi
+
+            echo "Waiting for SSH... attempt ${attempt}/30"
+            sleep 10
+          done
+
+          ssh quizx-ec2 'cloud-init status --wait || true'
+
+          ssh quizx-ec2 '
+            for attempt in {1..30}; do
+              if sudo docker --version && sudo docker compose version; then
+                exit 0
+              fi
+
+              echo "Waiting for Docker... attempt ${attempt}/30"
+              sleep 10
+            done
+
+            exit 1
+          '
+
+      - name: Copy application files to EC2
+        if: ${{ github.event.inputs.terraform_action == 'apply' }}
+        working-directory: .
+        run: |
+          tar \
+            --exclude='.git' \
+            --exclude='aws' \
+            --exclude='**/node_modules' \
+            --exclude='infra/terraform/.terraform' \
+            --exclude='infra/terraform/terraform.tfvars' \
+            --exclude='infra/terraform/terraform.tfstate' \
+            --exclude='infra/terraform/terraform.tfstate.backup' \
+            --exclude='terraform.tfstate' \
+            --exclude='quiz_x_aws_v_1_0_0_daily_project_plan.md' \
+            -czf - . \
+            | ssh quizx-ec2 '
+                rm -rf ~/quizx-aws-distributed-system
+                mkdir -p ~/quizx-aws-distributed-system
+                tar -xzf - -C ~/quizx-aws-distributed-system
+              '
+
+      - name: Start application on EC2
+        if: ${{ github.event.inputs.terraform_action == 'apply' }}
+        run: |
+          ssh quizx-ec2 '
+            cd ~/quizx-aws-distributed-system
+            sudo docker compose -f infra/docker/docker-compose.yml up -d --build
+            sudo docker compose -f infra/docker/docker-compose.yml ps
+          '
+
+          echo "Question App: ${{ steps.terraform_outputs.outputs.question_app_url }}"
+          echo "Submit App: ${{ steps.terraform_outputs.outputs.submit_app_url }}"
