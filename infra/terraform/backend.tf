@@ -1,8 +1,8 @@
 terraform {
   backend "s3" {
-    bucket = var.tf_state_bucket_name
+    bucket = "quizx-terraform-state-2026"
     key    = "quizx/terraform.tfstate"
-    region = var.aws_region
+    region = "eu-west-2"
 
     encrypt = true
   }
