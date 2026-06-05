@@ -2,5 +2,12 @@
 
 ## v1.0.0
 
-- Added the Question App frontend prototype for the first QuizX release.
-- Documented the v1.0.0 Figma prototype: [Question App v1.0.0 prototype](https://www.figma.com/proto/KCH2RPRIBkATIy3ZgRKi79/Untitled?node-id=1-2&t=SMZubngogai4VlE4-1&scaling=min-zoom&content-scaling=fixed&page-id=0%3A1&starting-point-node-id=1%3A2).
+- Added Terraform infrastructure for a single EC2 foundation release.
+- Added Docker Compose runtime for Question App, Submit App, and private MySQL.
+- Added GitHub Actions validation, Terraform apply/destroy workflow, and SSH app deployment to EC2.
+- Added application screenshots, Terraform evidence, and v1 test evidence.
+- Added security, cost, architecture, and learning notes for the release.
+
+Known release note:
+
+- The deploy workflow uses SSH with a repository secret for v1.0.0. A later production-style version should replace this with a more robust deployment mechanism.

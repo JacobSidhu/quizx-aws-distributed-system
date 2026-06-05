@@ -44,7 +44,8 @@ GitHub Repository
    | GitHub Actions
    | - run CI checks
    | - validate Terraform
-   | - deploy over SSH
+   | - run Terraform apply/destroy workflow
+   | - deploy app containers to EC2 over SSH
    v
 AWS EC2 Instance
    |
@@ -58,8 +59,8 @@ AWS EC2 Instance
    |     container port: 3200
    |     host port: 4200
    |
-   |-- database container
-   |     internal port: 3306 or 27017
+   |-- mysql container
+   |     internal port: 3306
    |     no public exposure
    |
    |-- private Docker network
@@ -80,14 +81,14 @@ This project deploys:
 | Route table | Routes public traffic through the internet gateway |
 | Security group | Controls inbound and outbound access |
 | EC2 instance | Ubuntu server used to run Docker containers |
-| Docker runtime | Installed automatically through EC2 user data |
+| Docker runtime | Installed on EC2 before running Docker Compose |
 | Question app container | Node.js Express app for reading quiz questions |
 | Submit app container | Node.js Express app for submitting quiz questions |
-| Database container | MySQL or MongoDB container for persistent quiz data |
+| Database container | MySQL container for persistent quiz data |
 | Docker network | Private internal communication between containers |
 | Docker volume | Persistent database storage |
 | GitHub Actions CI | Validates application and infrastructure code |
-| GitHub Actions CD | Deploys application updates to EC2 over SSH |
+| GitHub Actions CD | Provisions infrastructure and deploys application containers to EC2 |
 
 ---
 
@@ -102,7 +103,7 @@ This project deploys:
 | Runtime | Docker |
 | Orchestration | Docker Compose |
 | Backend | Node.js, Express.js |
-| Database | MySQL or MongoDB |
+| Database | MySQL |
 | CI/CD | GitHub Actions |
 | Remote deployment | SSH |
 | Documentation | Markdown |
@@ -135,7 +136,6 @@ quizx-aws-distributed-system/
 │   │   ├── main.tf
 │   │   ├── variables.tf
 │   │   ├── outputs.tf
-│   │   ├── user-data.sh
 │   │   └── terraform.tfvars.example
 │   │
 │   └── docker/
@@ -156,13 +156,11 @@ quizx-aws-distributed-system/
 │   │   └── v1-test-evidence.md
 │   ├── security-notes.md
 │   ├── cost-notes.md
-│   ├── cicd-notes.md
-│   ├── terraform-notes.md
 │   └── learning-log.md
 │
 ├── .github/
 │   └── workflows/
-│       ├── ci.yml
+│       ├── cli.yml
 │       └── deploy.yml
 │
 ├── .env.example
@@ -184,15 +182,15 @@ Required endpoints:
 | Method | Endpoint | Purpose |
 |---|---|---|
 | `GET` | `/categories` | Returns all available categories |
-| `GET` | `/question/:category` | Returns one random question from a category |
-| `GET` | `/question/:category?count=n` | Returns up to `n` questions from a category |
+| `GET` | `/questions/:category` | Returns one random question from a category |
+| `GET` | `/questions/:category?count=n` | Returns up to `n` questions from a category |
 
 Expected behaviour:
 
 - Categories are loaded from the database.
 - Questions are filtered by category.
-- Answers are returned in random order.
-- The correct answer is clearly shown after user selection.
+- Answer options are returned for each question.
+- Users can select an answer in the UI.
 - Static frontend files are served by the Express server.
 
 ---
@@ -242,7 +240,7 @@ EC2 was chosen for this version because it provides direct exposure to Linux ser
 
 ### Why Docker Compose?
 
-Docker Compose allows the project to run multiple application containers and a database container using one configuration file. It also provides service-name based networking, which allows containers to communicate using names such as `database` instead of hardcoded IP addresses.
+Docker Compose allows the project to run multiple application containers and a database container using one configuration file. It also provides service-name based networking, which allows containers to communicate using names such as `mysql` instead of hardcoded IP addresses.
 
 ### Why Terraform?
 
@@ -309,7 +307,7 @@ Example variables:
 
 ```env
 DB_TYPE=mysql
-DB_HOST=database
+DB_HOST=mysql
 DB_PORT=3306
 DB_NAME=quizx
 DB_USER=quizx_user
@@ -340,17 +338,17 @@ docker ps
 View logs:
 
 ```bash
-docker logs question-app
-docker logs submit-app
-docker logs database
+docker logs quizx-question-app
+docker logs quizx-submit-app
+docker logs quizx-mysql
 ```
 
 Test locally:
 
 ```bash
 curl http://localhost:4000/categories
-curl http://localhost:4000/question/Programming
-curl "http://localhost:4000/question/Programming?count=3"
+curl http://localhost:4000/questions/Science
+curl "http://localhost:4000/questions/Science?count=3"
 curl http://localhost:4200/categories
 curl http://localhost:4200/docs
 ```
@@ -439,7 +437,7 @@ ssh_command
 This project uses two workflows:
 
 ```text
-.github/workflows/ci.yml
+.github/workflows/cli.yml
 .github/workflows/deploy.yml
 ```
 
@@ -457,16 +455,17 @@ It validates:
 
 ### Deploy Workflow
 
-The deploy workflow deploys the application to EC2 over SSH.
+The deploy workflow runs Terraform apply or destroy from GitHub Actions.
 
-It should:
+On apply, it also:
 
-1. Connect to EC2 using GitHub secrets.
-2. Pull the latest repository code.
-3. Create or update the `.env` file.
-4. Run Docker Compose.
-5. Rebuild and restart containers.
-6. Confirm containers are running.
+1. Reads the EC2 public IP from Terraform outputs.
+2. Connects to EC2 using the `EC2_SSH_PRIVATE_KEY` secret.
+3. Waits for cloud-init and Docker readiness.
+4. Copies the checked-out repository files to EC2.
+5. Runs Docker Compose on EC2.
+6. Rebuilds and restarts containers.
+7. Prints the public Question App and Submit App URLs.
 
 ---
 
@@ -480,18 +479,15 @@ GitHub Repository → Settings → Secrets and variables → Actions
 
 | Secret | Purpose |
 |---|---|
-| `EC2_HOST` | Public IP of the EC2 instance |
-| `EC2_USERNAME` | EC2 username, usually `ubuntu` |
-| `EC2_SSH_PRIVATE_KEY` | Private SSH key used for deployment |
-| `APP_ENV_FILE` | Full `.env` content used on EC2 |
-
-Optional secrets for Terraform validation or planning:
-
-| Secret | Purpose |
-|---|---|
 | `AWS_ACCESS_KEY_ID` | AWS access key |
 | `AWS_SECRET_ACCESS_KEY` | AWS secret access key |
 | `AWS_REGION` | AWS region, for example `eu-west-2` |
+| `ALLOWED_SSH_CIDR` | CIDR allowed to SSH into EC2 |
+| `QUESTION_APP_CIDR` | CIDR allowed to access port `4000` |
+| `SUBMIT_APP_CIDR` | CIDR allowed to access port `4200` |
+| `AWS_AMI_ID` | Ubuntu AMI used for EC2 |
+| `SSH_PUBLIC_KEY` | Public key registered as the EC2 key pair |
+| `EC2_SSH_PRIVATE_KEY` | Private key matching `SSH_PUBLIC_KEY` for SSH deployment |
 
 For a later production-style version, GitHub OIDC with an IAM role should replace long-lived AWS access keys.
 
@@ -559,8 +555,8 @@ http://<EC2_PUBLIC_IP>:4200
 
 ```bash
 curl http://<EC2_PUBLIC_IP>:4000/categories
-curl http://<EC2_PUBLIC_IP>:4000/question/AWS
-curl "http://<EC2_PUBLIC_IP>:4000/question/AWS?count=3"
+curl http://<EC2_PUBLIC_IP>:4000/questions/AWS
+curl "http://<EC2_PUBLIC_IP>:4000/questions/AWS?count=3"
 curl http://<EC2_PUBLIC_IP>:4200/categories
 curl http://<EC2_PUBLIC_IP>:4200/docs
 ```
@@ -585,7 +581,7 @@ curl -X POST http://<EC2_PUBLIC_IP>:4200/submit \
 Confirm the submitted question is available:
 
 ```bash
-curl http://<EC2_PUBLIC_IP>:4000/question/AWS
+curl http://<EC2_PUBLIC_IP>:4000/questions/AWS
 ```
 
 ---
@@ -604,7 +600,7 @@ docker compose -f infra/docker/docker-compose.yml up -d
 Then confirm the question still exists:
 
 ```bash
-curl http://localhost:4000/question/AWS
+curl http://localhost:4000/questions/AWS
 ```
 
 Do not delete the Docker volume during this test.
@@ -616,7 +612,7 @@ Do not delete the Docker volume during this test.
 Stop the question app:
 
 ```bash
-docker stop question-app
+docker stop quizx-question-app
 ```
 
 Confirm the submit app is still reachable:
@@ -628,13 +624,13 @@ curl http://localhost:4200/categories
 Restart the question app:
 
 ```bash
-docker start question-app
+docker start quizx-question-app
 ```
 
 Stop the submit app:
 
 ```bash
-docker stop submit-app
+docker stop quizx-submit-app
 ```
 
 Confirm the question app is still reachable:
@@ -646,7 +642,7 @@ curl http://localhost:4000/categories
 Restart the submit app:
 
 ```bash
-docker start submit-app
+docker start quizx-submit-app
 ```
 
 Document the result honestly in:
@@ -679,7 +675,7 @@ Recommended screenshots:
 | Question app UI | Shows user-facing question app |
 | Submit app UI | Shows user-facing submit app |
 | `/categories` API response | Shows category retrieval |
-| `/question/:category` response | Shows question retrieval |
+| `/questions/:category` response | Shows question retrieval |
 | `/docs` endpoint | Shows API documentation |
 | Persistence test | Shows database volume behaviour |
 | Resilience test | Shows independent container operation |
@@ -783,7 +779,7 @@ This release demonstrates practical understanding of:
 - Database persistence using Docker volumes
 - Terraform infrastructure provisioning
 - GitHub Actions CI/CD
-- SSH-based deployment
+- Manual SSH-based application deployment
 - Secure handling of environment variables and secrets
 - Cost-aware cloud project design
 - Professional GitHub documentation
@@ -810,7 +806,7 @@ QuizX AWS v1.0.0 — Terraform + GitHub Actions + EC2 Docker Deployment
 Release summary:
 
 ```text
-This release deploys the first AWS version of QuizX using Terraform-provisioned infrastructure, Docker Compose runtime, and GitHub Actions deployment automation. It includes a question application, submit application, private database container, persistent storage, EC2 security group configuration, and professional project documentation.
+This release deploys the first AWS version of QuizX using Terraform-provisioned infrastructure, Docker Compose runtime, and GitHub Actions infrastructure automation. It includes a question application, submit application, private database container, persistent storage, EC2 security group configuration, and professional project documentation.
 ```
 
 ---
