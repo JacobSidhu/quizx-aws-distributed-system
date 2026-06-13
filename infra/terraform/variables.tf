@@ -94,6 +94,12 @@ variable "ssh_public_key" {
   sensitive   = true
 }
 
+variable "ec2_key_name" {
+  description = "Name of the AWS EC2 key pair"
+  type        = string
+  default     = null
+}
+
 variable "aws_ami_id" {
   description = "AMI ID for the EC2 instance"
   type        = string
