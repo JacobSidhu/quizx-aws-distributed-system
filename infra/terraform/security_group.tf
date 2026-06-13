@@ -1,7 +1,7 @@
-resource "aws_security_group" "quizx_sg" {
+resource "aws_security_group" "question_app_sg" {
 
-  name        = "quizx-sg"
-  description = "Allow HTTP and SSH traffic"
+  name        = "question-app-sg"
+  description = "Allow HTTP and SSH traffic for question app"
   vpc_id      = aws_vpc.main.id
 
   ingress {
@@ -20,6 +20,32 @@ resource "aws_security_group" "quizx_sg" {
     cidr_blocks = [var.question_app_cidr]
   }
 
+  egress {
+    description = "Allow all outbound traffic"
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  tags = merge(local.common_tags, {
+    Name = "${local.name_prefix}-web"
+  })
+}
+
+resource "aws_security_group" "submit_app_sg" {
+  name        = "submit-app-sg"
+  description = "Allow HTTP and SSH traffic for submit app"
+  vpc_id      = aws_vpc.main.id
+
+  ingress {
+    description = "Allow SSH from my IP"
+    from_port   = var.ssh_port
+    to_port     = var.ssh_port
+    protocol    = "tcp"
+    cidr_blocks = [var.allowed_ssh_cidr]
+  }
+
   ingress {
     description = "Allow HTTP access to submit app"
     from_port   = var.submit_app_port
@@ -35,18 +61,13 @@ resource "aws_security_group" "quizx_sg" {
     protocol    = "-1"
     cidr_blocks = ["0.0.0.0/0"]
   }
-
-  tags = merge(local.common_tags, {
-    Name = "${local.name_prefix}-web"
-  })
 }
 
-
 resource "aws_key_pair" "quizx_key" {
-  key_name   = "${var.project_name}-ec2-key"
+  key_name   = coalesce(var.ec2_key_name, "${var.project_name}-ec2-key")
   public_key = var.ssh_public_key
 
   tags = merge(local.common_tags, {
-    Name = "${local.name_prefix}-ec2-key"
+    Name = coalesce(var.ec2_key_name, "${local.name_prefix}-ec2-key")
   })
 }
