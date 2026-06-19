@@ -76,6 +76,12 @@ variable "question_app_port" {
   default     = null
 }
 
+variable "rabbitmq_port" {
+  description = "Port number for RabbitMQ AMQP traffic between EC2 instances"
+  type        = number
+  default     = 5672
+}
+
 variable "public_subnet_cidr" {
   description = "CIDR block for the public subnet"
   type        = string

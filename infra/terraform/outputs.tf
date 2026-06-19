@@ -13,6 +13,11 @@ output "question_app_ec2_public_dns" {
   value       = aws_instance.question_app.public_dns
 }
 
+output "question_app_ec2_private_ip" {
+  description = "Private IPv4 address of the EC2 instance running the question app"
+  value       = aws_instance.question_app.private_ip
+}
+
 output "question_app_ssh_command" {
   description = "SSH command for connecting to the EC2 instance"
   value       = "ssh -i <private-key-path> ubuntu@${aws_instance.question_app.public_ip}"
@@ -43,6 +48,11 @@ output "submit_app_ec2_public_ip" {
 output "submit_app_ec2_public_dns" {
   description = "Public DNS name of the EC2 instance"
   value       = aws_instance.submit_app.public_dns
+}
+
+output "submit_app_ec2_private_ip" {
+  description = "Private IPv4 address of the EC2 instance running the submit app and RabbitMQ"
+  value       = aws_instance.submit_app.private_ip
 }
 
 output "submit_app_ssh_command" {
