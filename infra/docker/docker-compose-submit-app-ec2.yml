@@ -1,0 +1,58 @@
+x-rabbitmq-environment: &rabbitmq-environment
+  RABBITMQ_HOST: rabbitmq
+  RABBITMQ_PORT: 5672
+  RABBITMQ_USER: quizx
+  RABBITMQ_PASSWORD: quizx_rabbitmq_password
+  RABBITMQ_QUEUE: question.submitted
+
+services:
+  rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    container_name: quizx-rabbitmq
+    restart: unless-stopped
+    environment:
+      RABBITMQ_DEFAULT_USER: quizx
+      RABBITMQ_DEFAULT_PASS: quizx_rabbitmq_password
+    volumes:
+      - quizx_rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 10s
+      retries: 20
+      start_period: 30s
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    networks:
+      - quizx_backend
+
+  submit-app:
+    build:
+      context: ../../app/submit-app
+      dockerfile: Dockerfile
+    image: quizx-submit-app:latest
+    container_name: quizx-submit-app
+    restart: unless-stopped
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    environment:
+      PORT: 4200
+      QUESTION_APP_BASE_URL: ${QUESTION_APP_BASE_URL:-http://question-app-private-ip:4000}
+      <<: *rabbitmq-environment
+    volumes:
+      - submit_app_data:/var/lib/category
+    ports:
+      - "4200:4200"
+    networks:
+      - quizx_backend
+
+networks:
+  quizx_backend:
+    name: quizx-docker-network
+    driver: bridge
+
+volumes:
+  submit_app_data:
+  quizx_rabbitmq_data:
