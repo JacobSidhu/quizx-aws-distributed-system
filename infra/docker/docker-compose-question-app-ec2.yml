@@ -1,0 +1,81 @@
+x-app-db-environment: &app-db-environment
+  DB_HOST: mysql
+  DB_PORT: 3306
+  DB_USER: quizx_app
+  DB_PASSWORD: quizx_app_password
+  DB_NAME: quizx
+
+x-rabbitmq-environment: &rabbitmq-environment
+  RABBITMQ_HOST: ${RABBITMQ_HOST:-submit-app-private-ip}
+  RABBITMQ_PORT: 5672
+  RABBITMQ_USER: quizx
+  RABBITMQ_PASSWORD: quizx_rabbitmq_password
+  RABBITMQ_QUEUE: question.submitted
+
+services:
+  mysql:
+    build:
+      context: ../../database
+      dockerfile: Dockerfile
+    image: quizx-mysql:latest
+    container_name: quizx-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: quizx_root_password
+      MYSQL_DATABASE: quizx
+      MYSQL_USER: quizx_app
+      MYSQL_PASSWORD: quizx_app_password
+    volumes:
+      - quizx_mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -u$${MYSQL_USER} -p$${MYSQL_PASSWORD} --silent"]
+      interval: 10s
+      timeout: 10s
+      retries: 20
+      start_period: 120s
+    networks:
+      - quizx_backend
+
+  question-app:
+    build:
+      context: ../../app/question-app
+      dockerfile: Dockerfile
+    image: quizx-question-app:latest
+    container_name: quizx-question-app
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      PORT: 4000
+      <<: *app-db-environment
+    ports:
+      - "4000:4000"
+    networks:
+      - quizx_backend
+
+  etl-consumer:
+    profiles:
+      - etl
+    build:
+      context: ../../app/etl-consumer
+      dockerfile: Dockerfile
+    image: quizx-etl-consumer:latest
+    container_name: quizx-etl-consumer
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      <<: [*app-db-environment, *rabbitmq-environment]
+      QUEUE_PREFETCH: 5
+    networks:
+      - quizx_backend
+
+networks:
+  quizx_backend:
+    name: quizx-docker-network
+    driver: bridge
+
+volumes:
+  quizx_mysql_data:
