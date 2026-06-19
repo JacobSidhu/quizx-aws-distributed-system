@@ -1,4 +1,6 @@
 const DEFAULT_PORT = 4200;
+const DEFAULT_RABBITMQ_PORT = 5672;
+const DEFAULT_CATEGORY_CACHE_FILE = '/var/lib/category/categories.json';
 
 const config = {
   app: {
@@ -6,12 +8,18 @@ const config = {
     version: '1.0.0',
     port: readNumber('PORT', readNumber('HOST_PORT', DEFAULT_PORT))
   },
-  db: {
-    host: readRequired('DB_HOST'),
-    port: readNumber('DB_PORT', 3306),
-    user: readRequired('DB_USER'),
-    password: readRequired('DB_PASSWORD'),
-    name: readRequired('DB_NAME')
+  questionApp: {
+    baseUrl: readRequired('QUESTION_APP_BASE_URL').replace(/\/$/, '')
+  },
+  categoryCache: {
+    file: process.env.CATEGORY_CACHE_FILE || DEFAULT_CATEGORY_CACHE_FILE
+  },
+  rabbitmq: {
+    host: readRequired('RABBITMQ_HOST'),
+    port: readNumber('RABBITMQ_PORT', DEFAULT_RABBITMQ_PORT),
+    user: readRequired('RABBITMQ_USER'),
+    password: readRequired('RABBITMQ_PASSWORD'),
+    queue: readRequired('RABBITMQ_QUEUE')
   }
 };
 

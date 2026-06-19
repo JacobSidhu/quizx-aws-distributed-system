@@ -18,10 +18,10 @@
   "scripts": {
     "start": "node --env-file=.env server.js",
     "start:prod": "node server.js",
-    "check": "node --check config.js && node --check db.js && node --check server.js"
+    "check": "node --check config.js && node --check queue.js && node --check server.js"
   },
   "dependencies": {
-    "express": "^5.2.1",
-    "mysql2": "^3.22.4"
+    "amqplib": "^0.10.9",
+    "express": "^5.2.1"
   }
 }
