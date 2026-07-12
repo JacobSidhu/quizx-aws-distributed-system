@@ -134,7 +134,7 @@ jobs:
               "Name=ip-permission.from-port,Values=22" \
               "Name=ip-permission.to-port,Values=22" \
               "Name=ip-permission.cidr,Values=${runner_ip}/32" \
-            --query 'length(SecurityGroups[0].IpPermissions[].IpRanges[])' \
+            --query 'length(SecurityGroups)' \
             --output text)
           if [ "$existing_rule" = "0" ]; then
             aws ec2 authorize-security-group-ingress \
@@ -258,7 +258,7 @@ jobs:
               "Name=ip-permission.from-port,Values=22" \
               "Name=ip-permission.to-port,Values=22" \
               "Name=ip-permission.cidr,Values=${runner_ip}/32" \
-            --query 'length(SecurityGroups[0].IpPermissions[].IpRanges[])' \
+            --query 'length(SecurityGroups)' \
             --output text)
           if [ "$existing_rule" = "0" ]; then
             aws ec2 authorize-security-group-ingress \
