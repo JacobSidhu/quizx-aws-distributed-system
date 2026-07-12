@@ -14,6 +14,40 @@ on:
 
 jobs:
   terraform:
+    name: Terraform checks
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: infra/terraform
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_wrapper: false
+
+      - name: Initialize Terraform
+        run: terraform init
+
+      - name: Format Terraform code
+        run: terraform fmt -check
+
+      - name: Validate Terraform configuration
+        run: terraform validate
+
+  terraform_apply:
+    name: Terraform apply
+    if: ${{ inputs.terraform_action == 'apply' }}
+    needs: terraform
     runs-on: ubuntu-latest
     outputs:
       question_app_ec2_public_ip: ${{ steps.terraform_outputs.outputs.question_app_ec2_public_ip }}
@@ -46,21 +80,13 @@ jobs:
       - name: Initialize Terraform
         run: terraform init
 
-      - name: Format Terraform code
-        run: terraform fmt -check
-
-      - name: Validate Terraform configuration
-        run: terraform validate
-
       - name: Get Terraform runner public IP
-        if: ${{ inputs.terraform_action == 'apply' }}
         id: runner_ip
         run: |
           runner_ip=$(curl -fsS https://checkip.amazonaws.com | tr -d '[:space:]')
           echo "cidr=${runner_ip}/32" >> "$GITHUB_OUTPUT"
 
       - name: Plan Terraform apply
-        if: ${{ inputs.terraform_action == 'apply' }}
         run: terraform plan -out=tfplan
         env:
           TF_VAR_aws_region: ${{ secrets.AWS_REGION }}
@@ -74,8 +100,49 @@ jobs:
           TF_VAR_question_app_port: 4000
           TF_VAR_submit_app_port: 4200
 
+      - name: Apply Terraform plan
+        run: terraform apply -auto-approve tfplan
+
+      - name: Read Terraform outputs
+        id: terraform_outputs
+        run: |
+          echo "question_app_ec2_public_ip=$(terraform output -raw question_app_ec2_public_ip)" >> "$GITHUB_OUTPUT"
+          echo "question_app_ec2_private_ip=$(terraform output -raw question_app_ec2_private_ip)" >> "$GITHUB_OUTPUT"
+          echo "question_app_url=$(terraform output -raw question_app_url)" >> "$GITHUB_OUTPUT"
+          echo "question_app_security_group_id=$(terraform output -raw question_app_security_group_id)" >> "$GITHUB_OUTPUT"
+          echo "submit_app_ec2_public_ip=$(terraform output -raw submit_app_ec2_public_ip)" >> "$GITHUB_OUTPUT"
+          echo "submit_app_ec2_private_ip=$(terraform output -raw submit_app_ec2_private_ip)" >> "$GITHUB_OUTPUT"
+          echo "submit_app_url=$(terraform output -raw submit_app_url)" >> "$GITHUB_OUTPUT"
+          echo "submit_app_security_group_id=$(terraform output -raw submit_app_security_group_id)" >> "$GITHUB_OUTPUT"
+
+  terraform_destroy:
+    name: Terraform destroy
+    if: ${{ inputs.terraform_action == 'destroy' }}
+    needs: terraform
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: infra/terraform
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_wrapper: false
+
+      - name: Initialize Terraform
+        run: terraform init
+
       - name: Plan Terraform destroy
-        if: ${{ inputs.terraform_action == 'destroy' }}
         run: terraform plan -destroy -out=tfplan
         env:
           TF_VAR_aws_region: ${{ secrets.AWS_REGION }}
@@ -89,26 +156,12 @@ jobs:
           TF_VAR_question_app_port: 4000
           TF_VAR_submit_app_port: 4200
 
-      - name: Run Terraform action
+      - name: Destroy infrastructure
         run: terraform apply -auto-approve tfplan
-
-      - name: Read Terraform outputs
-        if: ${{ inputs.terraform_action == 'apply' }}
-        id: terraform_outputs
-        run: |
-          echo "question_app_ec2_public_ip=$(terraform output -raw question_app_ec2_public_ip)" >> "$GITHUB_OUTPUT"
-          echo "question_app_ec2_private_ip=$(terraform output -raw question_app_ec2_private_ip)" >> "$GITHUB_OUTPUT"
-          echo "question_app_url=$(terraform output -raw question_app_url)" >> "$GITHUB_OUTPUT"
-          echo "question_app_security_group_id=$(terraform output -raw question_app_security_group_id)" >> "$GITHUB_OUTPUT"
-          echo "submit_app_ec2_public_ip=$(terraform output -raw submit_app_ec2_public_ip)" >> "$GITHUB_OUTPUT"
-          echo "submit_app_ec2_private_ip=$(terraform output -raw submit_app_ec2_private_ip)" >> "$GITHUB_OUTPUT"
-          echo "submit_app_url=$(terraform output -raw submit_app_url)" >> "$GITHUB_OUTPUT"
-          echo "submit_app_security_group_id=$(terraform output -raw submit_app_security_group_id)" >> "$GITHUB_OUTPUT"
 
   deploy-question-app:
     name: Deploy question app
-    if: ${{ inputs.terraform_action == 'apply' }}
-    needs: terraform
+    needs: terraform_apply
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -124,7 +177,7 @@ jobs:
       - name: Authorize deployment runner SSH
         id: runner_ip
         env:
-          SECURITY_GROUP_ID: ${{ needs.terraform.outputs.question_app_security_group_id }}
+          SECURITY_GROUP_ID: ${{ needs.terraform_apply.outputs.question_app_security_group_id }}
         run: |
           runner_ip=$(curl -fsS https://checkip.amazonaws.com | tr -d '[:space:]')
           echo "cidr=${runner_ip}/32" >> "$GITHUB_OUTPUT"
@@ -149,7 +202,7 @@ jobs:
 
       - name: Configure SSH
         env:
-          EC2_PUBLIC_IP: ${{ needs.terraform.outputs.question_app_ec2_public_ip }}
+          EC2_PUBLIC_IP: ${{ needs.terraform_apply.outputs.question_app_ec2_public_ip }}
           EC2_SSH_PRIVATE_KEY: ${{ secrets.EC2_SSH_PRIVATE_KEY }}
         run: |
           install -d -m 700 ~/.ssh
@@ -197,7 +250,7 @@ jobs:
 
       - name: Start question app
         env:
-          SUBMIT_APP_PRIVATE_IP: ${{ needs.terraform.outputs.submit_app_ec2_private_ip }}
+          SUBMIT_APP_PRIVATE_IP: ${{ needs.terraform_apply.outputs.submit_app_ec2_private_ip }}
         run: |
           ssh quizx-question-app "
             cd ~/quizx-aws-distributed-system
@@ -220,7 +273,7 @@ jobs:
       - name: Revoke deployment runner SSH
         if: ${{ always() && steps.runner_ip.outputs.authorized == 'true' }}
         env:
-          SECURITY_GROUP_ID: ${{ needs.terraform.outputs.question_app_security_group_id }}
+          SECURITY_GROUP_ID: ${{ needs.terraform_apply.outputs.question_app_security_group_id }}
           RUNNER_CIDR: ${{ steps.runner_ip.outputs.cidr }}
         run: |
           aws ec2 revoke-security-group-ingress \
@@ -231,8 +284,7 @@ jobs:
 
   deploy-submit-app:
     name: Deploy submit app
-    if: ${{ inputs.terraform_action == 'apply' }}
-    needs: terraform
+    needs: terraform_apply
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -248,7 +300,7 @@ jobs:
       - name: Authorize deployment runner SSH
         id: runner_ip
         env:
-          SECURITY_GROUP_ID: ${{ needs.terraform.outputs.submit_app_security_group_id }}
+          SECURITY_GROUP_ID: ${{ needs.terraform_apply.outputs.submit_app_security_group_id }}
         run: |
           runner_ip=$(curl -fsS https://checkip.amazonaws.com | tr -d '[:space:]')
           echo "cidr=${runner_ip}/32" >> "$GITHUB_OUTPUT"
@@ -273,7 +325,7 @@ jobs:
 
       - name: Configure SSH
         env:
-          EC2_PUBLIC_IP: ${{ needs.terraform.outputs.submit_app_ec2_public_ip }}
+          EC2_PUBLIC_IP: ${{ needs.terraform_apply.outputs.submit_app_ec2_public_ip }}
           EC2_SSH_PRIVATE_KEY: ${{ secrets.EC2_SSH_PRIVATE_KEY }}
         run: |
           install -d -m 700 ~/.ssh
@@ -321,7 +373,7 @@ jobs:
 
       - name: Start submit app
         env:
-          QUESTION_APP_PRIVATE_IP: ${{ needs.terraform.outputs.question_app_ec2_private_ip }}
+          QUESTION_APP_PRIVATE_IP: ${{ needs.terraform_apply.outputs.question_app_ec2_private_ip }}
         run: |
           ssh quizx-submit-app "
             cd ~/quizx-aws-distributed-system
@@ -344,7 +396,7 @@ jobs:
       - name: Revoke deployment runner SSH
         if: ${{ always() && steps.runner_ip.outputs.authorized == 'true' }}
         env:
-          SECURITY_GROUP_ID: ${{ needs.terraform.outputs.submit_app_security_group_id }}
+          SECURITY_GROUP_ID: ${{ needs.terraform_apply.outputs.submit_app_security_group_id }}
           RUNNER_CIDR: ${{ steps.runner_ip.outputs.cidr }}
         run: |
           aws ec2 revoke-security-group-ingress \
@@ -352,3 +404,59 @@ jobs:
             --protocol tcp \
             --port 22 \
             --cidr "$RUNNER_CIDR" 2>/dev/null || true
+
+  apply_summary:
+    name: Deployment summary
+    if: ${{ always() && inputs.terraform_action == 'apply' }}
+    needs:
+      - terraform_apply
+      - deploy-question-app
+      - deploy-submit-app
+    runs-on: ubuntu-latest
+    steps:
+      - name: Write apply summary
+        env:
+          TERRAFORM_RESULT: ${{ needs.terraform_apply.result }}
+          QUESTION_APP_RESULT: ${{ needs.deploy-question-app.result }}
+          SUBMIT_APP_RESULT: ${{ needs.deploy-submit-app.result }}
+          QUESTION_APP_URL: ${{ needs.terraform_apply.outputs.question_app_url }}
+          SUBMIT_APP_URL: ${{ needs.terraform_apply.outputs.submit_app_url }}
+        run: |
+          {
+            echo "## Apply deployment summary"
+            echo
+            echo "| Stage | Result |"
+            echo "| --- | --- |"
+            echo "| Terraform apply | ${TERRAFORM_RESULT} |"
+            echo "| Question app EC2 | ${QUESTION_APP_RESULT} |"
+            echo "| Submit app EC2 | ${SUBMIT_APP_RESULT} |"
+            echo
+            echo "- Question app: ${QUESTION_APP_URL:-not available}"
+            echo "- Submit app: ${SUBMIT_APP_URL:-not available}"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          if [ "$TERRAFORM_RESULT" != "success" ] || \
+             [ "$QUESTION_APP_RESULT" != "success" ] || \
+             [ "$SUBMIT_APP_RESULT" != "success" ]; then
+            exit 1
+          fi
+
+  destroy_summary:
+    name: Destroy summary
+    if: ${{ always() && inputs.terraform_action == 'destroy' }}
+    needs: terraform_destroy
+    runs-on: ubuntu-latest
+    steps:
+      - name: Write destroy summary
+        env:
+          DESTROY_RESULT: ${{ needs.terraform_destroy.result }}
+        run: |
+          {
+            echo "## Destroy deployment summary"
+            echo
+            echo "Terraform destroy result: **${DESTROY_RESULT}**"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          if [ "$DESTROY_RESULT" != "success" ]; then
+            exit 1
+          fi
