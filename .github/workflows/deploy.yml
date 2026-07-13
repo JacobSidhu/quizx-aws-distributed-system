@@ -405,6 +405,113 @@ jobs:
             --port 22 \
             --cidr "$RUNNER_CIDR" 2>/dev/null || true
 
+  integration_check:
+    name: Check app-to-app integration
+    needs:
+      - terraform_apply
+      - deploy-question-app
+      - deploy-submit-app
+    runs-on: ubuntu-latest
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Authorize integration runner SSH
+        id: runner_ip
+        env:
+          SECURITY_GROUP_ID: ${{ needs.terraform_apply.outputs.submit_app_security_group_id }}
+        run: |
+          runner_ip=$(curl -fsS https://checkip.amazonaws.com | tr -d '[:space:]')
+          echo "cidr=${runner_ip}/32" >> "$GITHUB_OUTPUT"
+          existing_rule=$(aws ec2 describe-security-groups \
+            --group-ids "$SECURITY_GROUP_ID" \
+            --filters \
+              "Name=ip-permission.from-port,Values=22" \
+              "Name=ip-permission.to-port,Values=22" \
+              "Name=ip-permission.cidr,Values=${runner_ip}/32" \
+            --query 'length(SecurityGroups)' \
+            --output text)
+          if [ "$existing_rule" = "0" ]; then
+            aws ec2 authorize-security-group-ingress \
+              --group-id "$SECURITY_GROUP_ID" \
+              --protocol tcp \
+              --port 22 \
+              --cidr "${runner_ip}/32"
+            echo "authorized=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "authorized=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Configure SSH
+        env:
+          EC2_PUBLIC_IP: ${{ needs.terraform_apply.outputs.submit_app_ec2_public_ip }}
+          EC2_SSH_PRIVATE_KEY: ${{ secrets.EC2_SSH_PRIVATE_KEY }}
+        run: |
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "$EC2_SSH_PRIVATE_KEY" > ~/.ssh/quizx-ec2-key
+          chmod 600 ~/.ssh/quizx-ec2-key
+          cat > ~/.ssh/config <<EOF
+          Host quizx-submit-app
+            HostName ${EC2_PUBLIC_IP}
+            User ubuntu
+            IdentityFile ~/.ssh/quizx-ec2-key
+            StrictHostKeyChecking no
+            UserKnownHostsFile /dev/null
+          EOF
+          chmod 600 ~/.ssh/config
+
+      - name: Test categories through submit app
+        run: |
+          echo "Configured question app URL:"
+          ssh quizx-submit-app 'sudo docker exec quizx-submit-app printenv QUESTION_APP_BASE_URL'
+
+          for attempt in {1..12}; do
+            if ssh quizx-submit-app 'curl -fsS http://localhost:4200/categories'; then
+              exit 0
+            fi
+            echo "Waiting for app-to-app categories request... attempt ${attempt}/12"
+            sleep 10
+          done
+
+          echo "Direct request from inside the submit container:"
+          ssh quizx-submit-app "sudo docker exec quizx-submit-app node -e '
+            const url = process.env.QUESTION_APP_BASE_URL + \"/categories\";
+            console.log(\"Requesting \" + url);
+            fetch(url)
+              .then(async (response) => {
+                console.log(\"Status: \" + response.status);
+                console.log(await response.text());
+                process.exit(response.ok ? 0 : 1);
+              })
+              .catch((error) => {
+                console.error(error);
+                console.error(error.cause);
+                process.exit(1);
+              });
+          '"
+
+      - name: Print container diagnostics
+        if: ${{ failure() }}
+        run: |
+          ssh quizx-submit-app 'sudo docker inspect quizx-submit-app --format "{{range .Config.Env}}{{println .}}{{end}}" | grep -E "^(QUESTION_APP_BASE_URL|PORT)=" || true'
+          ssh quizx-submit-app 'sudo docker logs --tail 100 quizx-submit-app || true'
+
+      - name: Revoke integration runner SSH
+        if: ${{ always() && steps.runner_ip.outputs.authorized == 'true' }}
+        env:
+          SECURITY_GROUP_ID: ${{ needs.terraform_apply.outputs.submit_app_security_group_id }}
+          RUNNER_CIDR: ${{ steps.runner_ip.outputs.cidr }}
+        run: |
+          aws ec2 revoke-security-group-ingress \
+            --group-id "$SECURITY_GROUP_ID" \
+            --protocol tcp \
+            --port 22 \
+            --cidr "$RUNNER_CIDR" 2>/dev/null || true
+
   apply_summary:
     name: Deployment summary
     if: ${{ always() && inputs.terraform_action == 'apply' }}
@@ -412,6 +519,7 @@ jobs:
       - terraform_apply
       - deploy-question-app
       - deploy-submit-app
+      - integration_check
     runs-on: ubuntu-latest
     steps:
       - name: Write apply summary
@@ -419,6 +527,7 @@ jobs:
           TERRAFORM_RESULT: ${{ needs.terraform_apply.result }}
           QUESTION_APP_RESULT: ${{ needs.deploy-question-app.result }}
           SUBMIT_APP_RESULT: ${{ needs.deploy-submit-app.result }}
+          INTEGRATION_RESULT: ${{ needs.integration_check.result }}
           QUESTION_APP_URL: ${{ needs.terraform_apply.outputs.question_app_url }}
           SUBMIT_APP_URL: ${{ needs.terraform_apply.outputs.submit_app_url }}
         run: |
@@ -430,6 +539,7 @@ jobs:
             echo "| Terraform apply | ${TERRAFORM_RESULT} |"
             echo "| Question app EC2 | ${QUESTION_APP_RESULT} |"
             echo "| Submit app EC2 | ${SUBMIT_APP_RESULT} |"
+            echo "| App-to-app categories | ${INTEGRATION_RESULT} |"
             echo
             echo "- Question app: ${QUESTION_APP_URL:-not available}"
             echo "- Submit app: ${SUBMIT_APP_URL:-not available}"
@@ -437,7 +547,8 @@ jobs:
 
           if [ "$TERRAFORM_RESULT" != "success" ] || \
              [ "$QUESTION_APP_RESULT" != "success" ] || \
-             [ "$SUBMIT_APP_RESULT" != "success" ]; then
+             [ "$SUBMIT_APP_RESULT" != "success" ] || \
+             [ "$INTEGRATION_RESULT" != "success" ]; then
             exit 1
           fi
 
