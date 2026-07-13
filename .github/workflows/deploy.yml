@@ -254,8 +254,8 @@ jobs:
         run: |
           ssh quizx-question-app "
             cd ~/quizx-aws-distributed-system
-            RABBITMQ_HOST=${SUBMIT_APP_PRIVATE_IP} \\
-              sudo -E docker compose -f infra/docker/docker-compose-question-app-ec2.yml up -d --build mysql question-app
+            sudo env RABBITMQ_HOST=${SUBMIT_APP_PRIVATE_IP} \\
+              docker compose -f infra/docker/docker-compose-question-app-ec2.yml up -d --build mysql question-app
             sudo docker compose -f infra/docker/docker-compose-question-app-ec2.yml ps
           "
 
@@ -377,8 +377,8 @@ jobs:
         run: |
           ssh quizx-submit-app "
             cd ~/quizx-aws-distributed-system
-            QUESTION_APP_BASE_URL=http://${QUESTION_APP_PRIVATE_IP}:4000 \\
-              sudo -E docker compose -f infra/docker/docker-compose-submit-app-ec2.yml up -d --build
+            sudo env QUESTION_APP_BASE_URL=http://${QUESTION_APP_PRIVATE_IP}:4000 \\
+              docker compose -f infra/docker/docker-compose-submit-app-ec2.yml up -d --build
             sudo docker compose -f infra/docker/docker-compose-submit-app-ec2.yml ps
           "
 
