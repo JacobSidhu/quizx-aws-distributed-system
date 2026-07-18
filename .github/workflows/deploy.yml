@@ -255,8 +255,9 @@ jobs:
           ssh quizx-question-app "
             cd ~/quizx-aws-distributed-system
             sudo env RABBITMQ_HOST=${SUBMIT_APP_PRIVATE_IP} \\
-              docker compose -f infra/docker/docker-compose-question-app-ec2.yml up -d --build mysql question-app
-            sudo docker compose -f infra/docker/docker-compose-question-app-ec2.yml ps
+              docker compose -f infra/docker/docker-compose-question-app-ec2.yml --profile etl \\
+                up -d --build mysql question-app etl-consumer
+            sudo docker compose -f infra/docker/docker-compose-question-app-ec2.yml --profile etl ps
           "
 
       - name: Check question app health
@@ -269,6 +270,14 @@ jobs:
             sleep 10
           done
           exit 1
+
+      - name: Check ETL consumer
+        run: |
+          if ! ssh quizx-question-app \
+            "sudo docker inspect --format='{{.State.Running}}' quizx-etl-consumer | grep -qx true"; then
+            ssh quizx-question-app 'sudo docker logs --tail 100 quizx-etl-consumer || true'
+            exit 1
+          fi
 
       - name: Revoke deployment runner SSH
         if: ${{ always() && steps.runner_ip.outputs.authorized == 'true' }}
