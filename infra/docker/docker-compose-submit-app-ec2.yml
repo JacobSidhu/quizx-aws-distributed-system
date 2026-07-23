@@ -1,9 +1,9 @@
 x-rabbitmq-environment: &rabbitmq-environment
   RABBITMQ_HOST: rabbitmq
   RABBITMQ_PORT: 5672
-  RABBITMQ_USER: quizx
-  RABBITMQ_PASSWORD: quizx_rabbitmq_password
-  RABBITMQ_QUEUE: question.submitted
+  RABBITMQ_USER: ${RABBITMQ_USER}
+  RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD}
+  RABBITMQ_QUEUE: ${RABBITMQ_QUEUE}
 
 services:
   rabbitmq:
@@ -11,8 +11,8 @@ services:
     container_name: quizx-rabbitmq
     restart: unless-stopped
     environment:
-      RABBITMQ_DEFAULT_USER: quizx
-      RABBITMQ_DEFAULT_PASS: quizx_rabbitmq_password
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD}
     volumes:
       - quizx_rabbitmq_data:/var/lib/rabbitmq
     healthcheck:

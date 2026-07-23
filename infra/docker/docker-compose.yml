@@ -1,16 +1,16 @@
 x-app-db-environment: &app-db-environment
   DB_HOST: mysql
   DB_PORT: 3306
-  DB_USER: quizx_app
-  DB_PASSWORD: quizx_app_password
-  DB_NAME: quizx
+  DB_USER: ${DB_USER}
+  DB_PASSWORD: ${DB_PASSWORD}
+  DB_NAME: ${DB_NAME}
 
 x-rabbitmq-environment: &rabbitmq-environment
   RABBITMQ_HOST: rabbitmq
   RABBITMQ_PORT: 5672
-  RABBITMQ_USER: quizx
-  RABBITMQ_PASSWORD: quizx_rabbitmq_password
-  RABBITMQ_QUEUE: question.submitted
+  RABBITMQ_USER: ${RABBITMQ_USER}
+  RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD}
+  RABBITMQ_QUEUE: ${RABBITMQ_QUEUE}
 
 services:
   mysql:
@@ -21,10 +21,10 @@ services:
     container_name: quizx-mysql
     restart: unless-stopped
     environment:
-      MYSQL_ROOT_PASSWORD: quizx_root_password
-      MYSQL_DATABASE: quizx
-      MYSQL_USER: quizx_app
-      MYSQL_PASSWORD: quizx_app_password
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${DB_NAME}
+      MYSQL_USER: ${DB_USER}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
     volumes:
       - quizx_mysql_data:/var/lib/mysql
     healthcheck:
@@ -41,8 +41,8 @@ services:
     container_name: quizx-rabbitmq
     restart: unless-stopped
     environment:
-      RABBITMQ_DEFAULT_USER: quizx
-      RABBITMQ_DEFAULT_PASS: quizx_rabbitmq_password
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD}
     volumes:
       - quizx_rabbitmq_data:/var/lib/rabbitmq
     healthcheck:

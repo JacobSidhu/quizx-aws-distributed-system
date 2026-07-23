@@ -488,6 +488,9 @@ GitHub Repository → Settings → Secrets and variables → Actions
 | `AWS_AMI_ID` | Ubuntu AMI used for EC2 |
 | `SSH_PUBLIC_KEY` | Public key registered as the EC2 key pair |
 | `EC2_SSH_PRIVATE_KEY` | Private key matching `SSH_PUBLIC_KEY` for SSH deployment |
+| `MYSQL_ROOT_PASSWORD` | Root password used to initialize the MySQL container |
+| `DB_PASSWORD` | Password shared by MySQL and the database clients |
+| `RABBITMQ_PASSWORD` | Password shared by RabbitMQ publisher and consumer |
 
 For a later production-style version, GitHub OIDC with an IAM role should replace long-lived AWS access keys.
 

@@ -15,6 +15,7 @@ jobs:
         app:
           - app/question-app/src
           - app/submit-app/src
+          - app/etl-consumer/src
 
     steps:
       - uses: actions/checkout@v4
