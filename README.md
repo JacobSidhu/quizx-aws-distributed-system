@@ -30,6 +30,8 @@ This release focuses on distributed service communication, asynchronous messagin
 
 The v2 runtime is split across two EC2 instances:
 
+![QuizX v2 distributed AWS architecture](docs/architecture/quizx-aws-v2-architecture.png)
+
 ---
 
 ## Architecture Flow
@@ -147,6 +149,7 @@ quizx-aws-distributed-system/
 ├── docs/
 │   ├── architecture/
 │   │   ├── quizx-aws-v1-architecture.png
+│   │   ├── quizx-aws-v2-architecture.png
 │   │   └── architecture-explanation.md
 │   ├── screenshots/
 │   ├── testing/
