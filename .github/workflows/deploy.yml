@@ -80,17 +80,11 @@ jobs:
       - name: Initialize Terraform
         run: terraform init
 
-      - name: Get Terraform runner public IP
-        id: runner_ip
-        run: |
-          runner_ip=$(curl -fsS https://checkip.amazonaws.com | tr -d '[:space:]')
-          echo "cidr=${runner_ip}/32" >> "$GITHUB_OUTPUT"
-
       - name: Plan Terraform apply
         run: terraform plan -out=tfplan
         env:
           TF_VAR_aws_region: ${{ secrets.AWS_REGION }}
-          TF_VAR_allowed_ssh_cidr: ${{ steps.runner_ip.outputs.cidr || secrets.ALLOWED_SSH_CIDR }}
+          TF_VAR_allowed_ssh_cidr: ${{ secrets.ALLOWED_SSH_CIDR }}
           TF_VAR_question_app_cidr: ${{ secrets.QUESTION_APP_CIDR }}
           TF_VAR_submit_app_cidr: ${{ secrets.SUBMIT_APP_CIDR }}
           TF_VAR_aws_ami_id: ${{ secrets.AWS_AMI_ID }}
