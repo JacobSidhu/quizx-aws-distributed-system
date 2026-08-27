@@ -1,6 +1,6 @@
 # Architecture Explanation
 
-QuizX AWS v1.0.0 runs a multi-container quiz system on a single AWS EC2 instance.
+QuizX AWS v2.0.0 runs a distributed, event-driven quiz system across two AWS EC2 instances.
 
 ## Infrastructure
 
@@ -10,28 +10,30 @@ Terraform provisions:
 - Public subnet
 - Internet gateway
 - Public route table
-- Security group
-- EC2 instance
+- Two security groups with restricted inter-service rules
+- Two EC2 instances
 - EC2 key pair
 
-The security group allows SSH from a configured CIDR and exposes only the two application ports.
+One instance hosts the Question App workload and the other hosts the Submit App workload. The security groups expose the two application ports, restrict RabbitMQ traffic to the Question App security group, and control SSH using configured CIDRs.
 
 ## Runtime
 
-Docker Compose starts three services:
+Docker Compose starts five services across the two instances:
 
 - `quizx-question-app` on public port `4000`
 - `quizx-submit-app` on public port `4200`
 - `quizx-mysql` on internal port `3306`
+- `quizx-rabbitmq` for durable question-submission messages
+- `quizx-etl-consumer` for consuming messages and persisting them in MySQL
 
-The application containers connect to MySQL through Docker DNS using the service name `mysql`.
+The Submit App publishes to RabbitMQ. The ETL consumer connects to RabbitMQ over the instances' private network, consumes each submission, and writes it to MySQL. The Submit App also reads categories from the Question App over its private address.
 
 ## Data Persistence
 
-MySQL stores data in the Docker volume `quizx_mysql_data`. Data should remain available after container recreation as long as the volume is not deleted.
+MySQL stores data in `quizx_mysql_data`, while RabbitMQ uses `quizx_rabbitmq_data`. Data and durable queue state remain available after container recreation as long as the volumes are not deleted.
 
 ## CI/CD
 
 The CI workflow checks Node.js syntax, Docker builds, and Terraform validation.
 
-The deploy workflow automates Terraform apply/destroy. On apply, it reads the EC2 public IP from Terraform outputs, connects to EC2 over SSH, copies the repository files, and starts the application with Docker Compose.
+The deploy workflow automates Terraform apply/destroy. On apply, it reads both EC2 public and private addresses, deploys the two workloads in parallel over SSH, checks application and consumer health, verifies private app-to-app integration, and revokes temporary runner SSH rules.

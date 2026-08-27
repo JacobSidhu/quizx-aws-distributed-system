@@ -5,7 +5,7 @@ const DEFAULT_CATEGORY_CACHE_FILE = '/var/lib/category/categories.json';
 const config = {
   app: {
     name: 'QuizX Submit App',
-    version: '1.0.0',
+    version: '2.0.0',
     port: readNumber('PORT', readNumber('HOST_PORT', DEFAULT_PORT))
   },
   questionApp: {

@@ -1,5 +1,19 @@
 # Learning Log
 
+## v2.0.0
+
+This release extends the foundation into an event-driven deployment across two EC2 instances.
+
+Key learning areas:
+
+- Publishing durable messages through RabbitMQ.
+- Consuming queue messages with a reconnecting ETL service.
+- Persisting asynchronously submitted questions in MySQL.
+- Connecting workloads through private EC2 addresses and security-group references.
+- Deploying independent workloads in parallel with GitHub Actions.
+- Verifying health, consumer state, app-to-app integration, and cleanup automatically.
+- Moving Terraform state to an encrypted, versioned S3 backend.
+
 ## v1.0.0
 
 This release demonstrates the foundation of an AWS-hosted distributed-system portfolio project.

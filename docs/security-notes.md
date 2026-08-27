@@ -1,6 +1,6 @@
 # Security Notes
 
-QuizX AWS v1.0.0 is a foundation release, so the security model is intentionally simple and visible.
+QuizX AWS v2.0.0 is a distributed learning release, so the security model remains intentionally simple and visible.
 
 ## Network Access
 
@@ -8,7 +8,9 @@ QuizX AWS v1.0.0 is a foundation release, so the security model is intentionally
 - Question App is exposed on port `4000`.
 - Submit App is exposed on port `4200`.
 - MySQL is not mapped to a public host port.
-- Containers communicate over the private Docker network `quizx-docker-network`.
+- RabbitMQ port `5672` is restricted to traffic from the Question App security group.
+- Cross-instance service communication uses private EC2 addresses.
+- Containers on each instance communicate over a private Docker network.
 
 ## Secret Handling
 
@@ -23,4 +25,5 @@ QuizX AWS v1.0.0 is a foundation release, so the security model is intentionally
 - Application ports are public for portfolio demonstration.
 - The apps are served over HTTP, not HTTPS.
 - GitHub Actions currently use long-lived AWS credentials if configured.
-- Later versions should use HTTPS, stronger auth, rate limiting, and GitHub OIDC.
+- The RabbitMQ management port is mapped on the host but is not permitted by the AWS security group; use an SSH tunnel for administrative access.
+- Later versions should use HTTPS, stronger authentication, rate limiting, private subnets, and GitHub OIDC.

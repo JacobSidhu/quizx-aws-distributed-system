@@ -1,6 +1,6 @@
 ## QuizX Submit App
 
-Version 1.0.0 service for adding quiz categories and questions to MySQL.
+Version 2.0.0 service for publishing submitted quiz categories and questions to RabbitMQ.
 
 ### Endpoints
 
@@ -52,7 +52,7 @@ npm start
 Build the image from the repository root:
 
 ```bash
-docker build -t quizx-submit-app:1.0.0 app/submit-app
+docker build -t quizx-submit-app:2.0.0 app/submit-app
 ```
 
 The container expects database settings through environment variables and listens

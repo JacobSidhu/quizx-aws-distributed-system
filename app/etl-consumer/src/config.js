@@ -6,7 +6,7 @@ const DEFAULT_RECONNECT_DELAY_MS = 5000;
 const config = {
   app: {
     name: 'QuizX ETL Consumer',
-    version: '1.0.0',
+    version: '2.0.0',
     prefetch: readNumber('QUEUE_PREFETCH', DEFAULT_PREFETCH),
     reconnectDelayMs: readNumber('RECONNECT_DELAY_MS', DEFAULT_RECONNECT_DELAY_MS)
   },

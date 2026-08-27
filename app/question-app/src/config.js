@@ -5,7 +5,7 @@ const DEFAULT_MAX_QUESTION_COUNT = 25;
 const config = {
   app: {
     name: 'QuizX Question App',
-    version: '1.0.0',
+    version: '2.0.0',
     port: readNumber('PORT', DEFAULT_PORT),
     maxQuestionCount: readNumber('MAX_QUESTION_COUNT', DEFAULT_MAX_QUESTION_COUNT)
   },

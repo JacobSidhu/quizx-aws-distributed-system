@@ -1,6 +1,6 @@
 {
   "name": "etl-consumer",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "description": "QuizX RabbitMQ consumer that loads submitted questions into MySQL.",
   "private": true,
   "license": "ISC",

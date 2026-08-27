@@ -1,6 +1,6 @@
 {
   "name": "submit-app",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "description": "QuizX service for submitting quiz questions and categories.",
   "private": true,
   "homepage": "https://github.com/jacobsidhu/quizx-aws-discributed-system#readme",

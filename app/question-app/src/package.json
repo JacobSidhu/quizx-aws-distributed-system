@@ -1,6 +1,6 @@
 {
   "name": "question-app",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "description": "QuizX service for listing categories and serving random quiz questions.",
   "private": true,
   "homepage": "https://github.com/jacobsidhu/quizx-aws-distribution-system#readme",
