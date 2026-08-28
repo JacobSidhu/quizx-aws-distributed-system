@@ -6,6 +6,8 @@
 **Deployment Model:** Two EC2 instances, Docker Compose, RabbitMQ, Terraform, GitHub Actions
 **Legacy prototypes:** [Question App v1 prototype](https://www.figma.com/proto/KCH2RPRIBkATIy3ZgRKi79/QuizX?node-id=41-113&t=FFJBauryCt84Bxe9-1) and [Submit App v1 prototype](https://www.figma.com/proto/KCH2RPRIBkATIy3ZgRKi79/QuizX?node-id=0-1&t=1fftyZSMal3CHOug-1)
 
+**Release evidence:** [v2 test evidence](docs/testing/v2-test-evidence.md) · [demonstration video](https://drive.google.com/file/d/1oShK66vFUYSngbPsM95TE_LUGg-Pae1D/view?usp=sharing)
+
 ---
 
 ## Project Overview
@@ -153,7 +155,8 @@ quizx-aws-distributed-system/
 │   │   └── architecture-explanation.md
 │   ├── screenshots/
 │   ├── testing/
-│   │   └── v1-test-evidence.md
+│   │   ├── v1-test-evidence.md
+│   │   └── v2-test-evidence.md
 │   ├── security-notes.md
 │   ├── cost-notes.md
 │   └── learning-log.md
@@ -648,10 +651,10 @@ Restart the submit app:
 docker start quizx-submit-app
 ```
 
-Document the result honestly in:
+Document the v2 results in:
 
 ```text
-docs/testing/v1-test-evidence.md
+docs/testing/v2-test-evidence.md
 ```
 
 ---
@@ -674,7 +677,9 @@ Recommended screenshots:
 | Terraform outputs | Shows generated URLs/IPs |
 | GitHub Actions CI success | Shows automated validation |
 | GitHub Actions deploy success | Shows automated deployment |
-| Docker containers running | Shows deployed runtime |
+| Containers on both EC2 instances | Shows the split deployed runtime |
+| RabbitMQ message waiting | Shows durable queue behaviour while ETL is stopped |
+| RabbitMQ message consumed | Shows ETL recovery and message processing |
 | Question app UI | Shows user-facing question app |
 | Submit app UI | Shows user-facing submit app |
 | `/categories` API response | Shows category retrieval |
@@ -687,24 +692,8 @@ Recommended screenshots:
 
 ## Cleanup
 
-To stop containers on EC2:
-
-```bash
-docker compose -f infra/docker/docker-compose.yml down
-```
-
-To remove containers and unused images:
-
-```bash
-docker system prune -f
-```
-
-To destroy AWS infrastructure:
-
-```bash
-cd infra/terraform
-terraform destroy
-```
+Run the GitHub Actions **Deploy** workflow with `terraform_action: destroy` so
+cleanup uses the same remote state and automation path as deployment.
 
 Confirm resources are removed from AWS:
 
