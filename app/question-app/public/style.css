@@ -6,6 +6,7 @@
     --outline: #79747e;
     --option: #ccc;
     --option-selected: #bbb8b0;
+    --option-correct: #9fdfb2;
     --white: #fff;
 }
 
@@ -252,6 +253,10 @@ select {
 .option-button:hover,
 .option-button.is-selected {
     background: var(--option-selected);
+}
+
+.option-button.is-correct {
+    background: var(--option-correct);
 }
 
 .empty-state {

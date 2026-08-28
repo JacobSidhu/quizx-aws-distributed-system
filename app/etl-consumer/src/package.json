@@ -1,0 +1,19 @@
+{
+  "name": "etl-consumer",
+  "version": "2.0.0",
+  "description": "QuizX RabbitMQ consumer that loads submitted questions into MySQL.",
+  "private": true,
+  "license": "ISC",
+  "author": "JacobSidhu",
+  "type": "commonjs",
+  "main": "consumer.js",
+  "scripts": {
+    "start": "node --env-file=.env consumer.js",
+    "start:prod": "node consumer.js",
+    "check": "node --check config.js && node --check db.js && node --check consumer.js"
+  },
+  "dependencies": {
+    "amqplib": "^0.10.9",
+    "mysql2": "^3.22.4"
+  }
+}

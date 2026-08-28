@@ -69,8 +69,14 @@ function validatePayload(payload) {
 
 async function loadCategories() {
     try {
+        const previousCategory = elements.categorySelect.value;
         const data = await getJson('/categories');
         const categories = data.categories || [];
+        const placeholder = document.createElement('option');
+
+        placeholder.value = '';
+        placeholder.textContent = 'Choose Category';
+        elements.categorySelect.replaceChildren(placeholder);
 
         categories.forEach((category) => {
             const option = document.createElement('option');
@@ -79,6 +85,10 @@ async function loadCategories() {
             option.textContent = category;
             elements.categorySelect.appendChild(option);
         });
+
+        if (categories.includes(previousCategory)) {
+            elements.categorySelect.value = previousCategory;
+        }
     } catch (error) {
         console.error(error);
         setMessage('Categories could not be loaded.', 'error');
@@ -134,5 +144,7 @@ elements.form.addEventListener('submit', submitQuestion);
 elements.form.addEventListener('reset', () => {
     window.setTimeout(clearForm, 0);
 });
+elements.categorySelect.addEventListener('focus', loadCategories);
+elements.categorySelect.addEventListener('click', loadCategories);
 
 loadCategories();

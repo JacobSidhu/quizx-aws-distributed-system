@@ -1,12 +1,12 @@
 x-app-db-environment: &app-db-environment
   DB_HOST: mysql
   DB_PORT: 3306
+  DB_NAME: ${DB_NAME}
   DB_USER: ${DB_USER}
   DB_PASSWORD: ${DB_PASSWORD}
-  DB_NAME: ${DB_NAME}
 
 x-rabbitmq-environment: &rabbitmq-environment
-  RABBITMQ_HOST: rabbitmq
+  RABBITMQ_HOST: ${RABBITMQ_HOST:-submit-app-private-ip}
   RABBITMQ_PORT: 5672
   RABBITMQ_USER: ${RABBITMQ_USER}
   RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD}
@@ -36,27 +36,6 @@ services:
     networks:
       - quizx_backend
 
-  rabbitmq:
-    image: rabbitmq:3.13-management-alpine
-    container_name: quizx-rabbitmq
-    restart: unless-stopped
-    environment:
-      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER}
-      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD}
-    volumes:
-      - quizx_rabbitmq_data:/var/lib/rabbitmq
-    healthcheck:
-      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
-      interval: 10s
-      timeout: 10s
-      retries: 20
-      start_period: 30s
-    ports:
-      - "5672:5672"
-      - "15672:15672"
-    networks:
-      - quizx_backend
-
   question-app:
     build:
       context: ../../app/question-app
@@ -75,27 +54,6 @@ services:
     networks:
       - quizx_backend
 
-  submit-app:
-    build:
-      context: ../../app/submit-app
-      dockerfile: Dockerfile
-    image: quizx-submit-app:latest
-    container_name: quizx-submit-app
-    restart: unless-stopped
-    depends_on:
-      rabbitmq:
-        condition: service_healthy
-    environment:
-      PORT: 4200
-      QUESTION_APP_BASE_URL: http://question-app:4000
-      <<: *rabbitmq-environment
-    volumes:
-      - submit_app_data:/var/lib/category
-    ports:
-      - "4200:4200"
-    networks:
-      - quizx_backend
-
   etl-consumer:
     profiles:
       - etl
@@ -107,8 +65,6 @@ services:
     restart: unless-stopped
     depends_on:
       mysql:
-        condition: service_healthy
-      rabbitmq:
         condition: service_healthy
     environment:
       <<: [*app-db-environment, *rabbitmq-environment]
@@ -123,5 +79,3 @@ networks:
 
 volumes:
   quizx_mysql_data:
-  quizx_rabbitmq_data:
-  submit_app_data:

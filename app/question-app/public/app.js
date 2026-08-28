@@ -60,7 +60,13 @@ function buildQuestionCard(question, index) {
     title.textContent = `${index + 1}. ${question.question}`;
 
     question.options.forEach((option) => {
-        optionList.appendChild(buildOptionButton(option));
+        const button = buildOptionButton(option);
+
+        if (option === question.answer) {
+            button.dataset.correct = 'true';
+        }
+
+        optionList.appendChild(button);
     });
 
     card.append(title, optionList);
@@ -99,7 +105,7 @@ async function loadQuestions() {
 
     try {
         const path = encodeURIComponent(currentCategory);
-        const data = await getJson(`/questions/${path}?count=${count}`);
+        const data = await getJson(`/question/${path}?count=${count}`);
 
         renderQuestions(data.questions || []);
     } catch (error) {
@@ -110,6 +116,7 @@ async function loadQuestions() {
 
 async function loadCategories() {
     try {
+        const previousCategory = elements.categorySelect.value || currentCategory;
         const data = await getJson('/categories');
         const categories = data.categories || [];
 
@@ -127,7 +134,11 @@ async function loadCategories() {
             elements.categorySelect.appendChild(option);
         });
 
-        currentCategory = categories.includes(DEFAULT_CATEGORY) ? DEFAULT_CATEGORY : categories[0];
+        currentCategory = categories.includes(previousCategory)
+            ? previousCategory
+            : categories.includes(DEFAULT_CATEGORY)
+                ? DEFAULT_CATEGORY
+                : categories[0];
         elements.categorySelect.value = currentCategory;
         elements.selectedCategory.textContent = currentCategory;
     } catch (error) {
@@ -146,11 +157,17 @@ elements.questions.addEventListener('click', (event) => {
     const optionList = selectedOption.closest('.options-list');
     const options = optionList.querySelectorAll('.option-button');
 
-    options.forEach((option) => option.classList.remove('is-selected'));
+    options.forEach((option) => {
+        option.classList.remove('is-selected');
+        option.classList.toggle('is-correct', option.dataset.correct === 'true');
+    });
+
     selectedOption.classList.add('is-selected');
 });
 
 // Category/count changes are applied when the user starts a new quiz.
 elements.restartButton.addEventListener('click', loadQuestions);
+elements.categorySelect.addEventListener('focus', loadCategories);
+elements.categorySelect.addEventListener('click', loadCategories);
 
 loadCategories().then(loadQuestions);

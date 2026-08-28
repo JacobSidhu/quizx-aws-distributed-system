@@ -48,7 +48,8 @@ app.get('/docs', (req, res) => {
       'GET /health': 'Returns process health.',
       'GET /ready': 'Checks database connectivity.',
       'GET /categories': 'Returns all available quiz categories.',
-      'GET /questions/:category?count=5': 'Returns random questions without answers.'
+      'GET /question/:category?count=5': 'Returns random questions with randomized answer options.',
+      'GET /questions/:category?count=5': 'Compatibility alias for GET /question/:category.'
     },
     limits: {
       maxQuestionCount: config.app.maxQuestionCount
@@ -56,7 +57,7 @@ app.get('/docs', (req, res) => {
   });
 });
 
-app.get('/questions/:category', async (req, res, next) => {
+app.get(['/question/:category', '/questions/:category'], async (req, res, next) => {
   try {
     const requestedCategory = normalizeText(req.params.category).toLowerCase();
 
@@ -83,7 +84,7 @@ app.get('/questions/:category', async (req, res, next) => {
 
     const [questions] = await mysql.query(
       `
-        SELECT id, question_text
+        SELECT id, question_text, answer
         FROM questions
         WHERE category_id = ?
         ORDER BY RAND()
@@ -102,7 +103,7 @@ app.get('/questions/:category', async (req, res, next) => {
     const optionPlaceholders = questionIds.map(() => '?').join(', ');
     const [options] = await mysql.query(
       `
-        SELECT question_id, option_text
+        SELECT question_id, option_text, is_correct
         FROM question_options
         WHERE question_id IN (${optionPlaceholders})
         ORDER BY id
@@ -111,15 +112,22 @@ app.get('/questions/:category', async (req, res, next) => {
     );
     const optionsByQuestionId = options.reduce((result, option) => {
       result[option.question_id] = result[option.question_id] || [];
-      result[option.question_id].push(option.option_text);
+      result[option.question_id].push({
+        text: option.option_text,
+        isCorrect: Boolean(option.is_correct)
+      });
 
       return result;
     }, {});
 
     const safeQuestions = questions.map((question) => {
+      const options = shuffle(optionsByQuestionId[question.id] || []);
+      const correctOption = options.find((option) => option.isCorrect);
+
       return {
         question: question.question_text,
-        options: optionsByQuestionId[question.id] || []
+        answer: correctOption?.text || question.answer,
+        options: options.map((option) => option.text)
       };
     });
 
@@ -178,6 +186,17 @@ function normalizeQuestionCount(value) {
 
 function normalizeText(value) {
   return typeof value === 'string' ? value.trim() : '';
+}
+
+function shuffle(values) {
+  const shuffled = [...values];
+
+  for (let index = shuffled.length - 1; index > 0; index -= 1) {
+    const swapIndex = Math.floor(Math.random() * (index + 1));
+    [shuffled[index], shuffled[swapIndex]] = [shuffled[swapIndex], shuffled[index]];
+  }
+
+  return shuffled;
 }
 
 async function shutdown(server) {

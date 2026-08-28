@@ -11,14 +11,14 @@ on:
         options:
           - apply
           - destroy
+
 jobs:
   terraform:
+    name: Terraform checks
     runs-on: ubuntu-latest
-
     defaults:
       run:
         working-directory: infra/terraform
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -32,6 +32,8 @@ jobs:
 
       - name: Set up Terraform
         uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_wrapper: false
 
       - name: Initialize Terraform
         run: terraform init
@@ -42,19 +44,47 @@ jobs:
       - name: Validate Terraform configuration
         run: terraform validate
 
-      - name: Get GitHub runner public IP
-        if: ${{ inputs.terraform_action == 'apply' }}
-        id: runner_ip
-        run: |
-          RUNNER_IP=$(curl -fsS https://checkip.amazonaws.com)
-          echo "cidr=${RUNNER_IP}/32" >> "$GITHUB_OUTPUT"
+  terraform_apply:
+    name: Terraform apply
+    if: ${{ inputs.terraform_action == 'apply' }}
+    needs: terraform
+    runs-on: ubuntu-latest
+    outputs:
+      question_app_ec2_public_ip: ${{ steps.terraform_outputs.outputs.question_app_ec2_public_ip }}
+      question_app_ec2_private_ip: ${{ steps.terraform_outputs.outputs.question_app_ec2_private_ip }}
+      question_app_url: ${{ steps.terraform_outputs.outputs.question_app_url }}
+      question_app_security_group_id: ${{ steps.terraform_outputs.outputs.question_app_security_group_id }}
+      submit_app_ec2_public_ip: ${{ steps.terraform_outputs.outputs.submit_app_ec2_public_ip }}
+      submit_app_ec2_private_ip: ${{ steps.terraform_outputs.outputs.submit_app_ec2_private_ip }}
+      submit_app_url: ${{ steps.terraform_outputs.outputs.submit_app_url }}
+      submit_app_security_group_id: ${{ steps.terraform_outputs.outputs.submit_app_security_group_id }}
+    defaults:
+      run:
+        working-directory: infra/terraform
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_wrapper: false
+
+      - name: Initialize Terraform
+        run: terraform init
 
       - name: Plan Terraform apply
-        if: ${{ github.event.inputs.terraform_action == 'apply' }}
         run: terraform plan -out=tfplan
         env:
           TF_VAR_aws_region: ${{ secrets.AWS_REGION }}
-          TF_VAR_allowed_ssh_cidr: ${{ steps.runner_ip.outputs.cidr }}
+          TF_VAR_allowed_ssh_cidr: ${{ secrets.ALLOWED_SSH_CIDR }}
           TF_VAR_question_app_cidr: ${{ secrets.QUESTION_APP_CIDR }}
           TF_VAR_submit_app_cidr: ${{ secrets.SUBMIT_APP_CIDR }}
           TF_VAR_aws_ami_id: ${{ secrets.AWS_AMI_ID }}
@@ -64,8 +94,49 @@ jobs:
           TF_VAR_question_app_port: 4000
           TF_VAR_submit_app_port: 4200
 
+      - name: Apply Terraform plan
+        run: terraform apply -auto-approve tfplan
+
+      - name: Read Terraform outputs
+        id: terraform_outputs
+        run: |
+          echo "question_app_ec2_public_ip=$(terraform output -raw question_app_ec2_public_ip)" >> "$GITHUB_OUTPUT"
+          echo "question_app_ec2_private_ip=$(terraform output -raw question_app_ec2_private_ip)" >> "$GITHUB_OUTPUT"
+          echo "question_app_url=$(terraform output -raw question_app_url)" >> "$GITHUB_OUTPUT"
+          echo "question_app_security_group_id=$(terraform output -raw question_app_security_group_id)" >> "$GITHUB_OUTPUT"
+          echo "submit_app_ec2_public_ip=$(terraform output -raw submit_app_ec2_public_ip)" >> "$GITHUB_OUTPUT"
+          echo "submit_app_ec2_private_ip=$(terraform output -raw submit_app_ec2_private_ip)" >> "$GITHUB_OUTPUT"
+          echo "submit_app_url=$(terraform output -raw submit_app_url)" >> "$GITHUB_OUTPUT"
+          echo "submit_app_security_group_id=$(terraform output -raw submit_app_security_group_id)" >> "$GITHUB_OUTPUT"
+
+  terraform_destroy:
+    name: Terraform destroy
+    if: ${{ inputs.terraform_action == 'destroy' }}
+    needs: terraform
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: infra/terraform
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_wrapper: false
+
+      - name: Initialize Terraform
+        run: terraform init
+
       - name: Plan Terraform destroy
-        if: ${{ github.event.inputs.terraform_action == 'destroy' }}
         run: terraform plan -destroy -out=tfplan
         env:
           TF_VAR_aws_region: ${{ secrets.AWS_REGION }}
@@ -79,62 +150,80 @@ jobs:
           TF_VAR_question_app_port: 4000
           TF_VAR_submit_app_port: 4200
 
-      - name: Run Terraform action
+      - name: Destroy infrastructure
         run: terraform apply -auto-approve tfplan
 
-      - name: Read Terraform outputs
-        if: ${{ github.event.inputs.terraform_action == 'apply' }}
-        id: terraform_outputs
+  deploy-question-app:
+    name: Deploy question app
+    needs: terraform_apply
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Authorize deployment runner SSH
+        id: runner_ip
+        env:
+          SECURITY_GROUP_ID: ${{ needs.terraform_apply.outputs.question_app_security_group_id }}
         run: |
-          echo "ec2_public_ip=$(terraform output -raw ec2_public_ip)" >> "$GITHUB_OUTPUT"
-          echo "question_app_url=$(terraform output -raw question_app_url)" >> "$GITHUB_OUTPUT"
-          echo "submit_app_url=$(terraform output -raw submit_app_url)" >> "$GITHUB_OUTPUT"
+          runner_ip=$(curl -fsS https://checkip.amazonaws.com | tr -d '[:space:]')
+          echo "cidr=${runner_ip}/32" >> "$GITHUB_OUTPUT"
+          existing_rule=$(aws ec2 describe-security-groups \
+            --group-ids "$SECURITY_GROUP_ID" \
+            --filters \
+              "Name=ip-permission.from-port,Values=22" \
+              "Name=ip-permission.to-port,Values=22" \
+              "Name=ip-permission.cidr,Values=${runner_ip}/32" \
+            --query 'length(SecurityGroups)' \
+            --output text)
+          if [ "$existing_rule" = "0" ]; then
+            aws ec2 authorize-security-group-ingress \
+              --group-id "$SECURITY_GROUP_ID" \
+              --protocol tcp \
+              --port 22 \
+              --cidr "${runner_ip}/32"
+            echo "authorized=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "authorized=false" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Configure SSH
-        if: ${{ github.event.inputs.terraform_action == 'apply' }}
+        env:
+          EC2_PUBLIC_IP: ${{ needs.terraform_apply.outputs.question_app_ec2_public_ip }}
+          EC2_SSH_PRIVATE_KEY: ${{ secrets.EC2_SSH_PRIVATE_KEY }}
         run: |
-          mkdir -p ~/.ssh
-          printf '%s\n' "${{ secrets.EC2_SSH_PRIVATE_KEY }}" > ~/.ssh/quizx-ec2-key
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "$EC2_SSH_PRIVATE_KEY" > ~/.ssh/quizx-ec2-key
           chmod 600 ~/.ssh/quizx-ec2-key
           cat > ~/.ssh/config <<EOF
-          Host quizx-ec2
-            HostName ${{ steps.terraform_outputs.outputs.ec2_public_ip }}
+          Host quizx-question-app
+            HostName ${EC2_PUBLIC_IP}
             User ubuntu
             IdentityFile ~/.ssh/quizx-ec2-key
             StrictHostKeyChecking no
             UserKnownHostsFile /dev/null
           EOF
+          chmod 600 ~/.ssh/config
 
-      - name: Wait for EC2 Docker readiness
-        if: ${{ github.event.inputs.terraform_action == 'apply' }}
+      - name: Wait for question EC2 Docker readiness
         run: |
           for attempt in {1..30}; do
-            if ssh quizx-ec2 'echo "SSH ready"'; then
-              break
+            if ssh quizx-question-app 'cloud-init status --wait || true; sudo docker --version && sudo docker compose version'; then
+              exit 0
             fi
-
-            echo "Waiting for SSH... attempt ${attempt}/30"
+            echo "Waiting for question app EC2... attempt ${attempt}/30"
             sleep 10
           done
+          exit 1
 
-          ssh quizx-ec2 'cloud-init status --wait || true'
-
-          ssh quizx-ec2 '
-            for attempt in {1..30}; do
-              if sudo docker --version && sudo docker compose version; then
-                exit 0
-              fi
-
-              echo "Waiting for Docker... attempt ${attempt}/30"
-              sleep 10
-            done
-
-            exit 1
-          '
-
-      - name: Copy application files to EC2
-        if: ${{ github.event.inputs.terraform_action == 'apply' }}
-        working-directory: .
+      - name: Copy application files to question EC2
         run: |
           tar \
             --exclude='.git' \
@@ -142,25 +231,362 @@ jobs:
             --exclude='**/node_modules' \
             --exclude='infra/terraform/.terraform' \
             --exclude='infra/terraform/terraform.tfvars' \
-            --exclude='infra/terraform/terraform.tfstate' \
-            --exclude='infra/terraform/terraform.tfstate.backup' \
+            --exclude='infra/terraform/terraform.tfstate*' \
             --exclude='terraform.tfstate' \
             --exclude='quiz_x_aws_v_1_0_0_daily_project_plan.md' \
+            --exclude='project' \
             -czf - . \
-            | ssh quizx-ec2 '
+            | ssh quizx-question-app '
                 rm -rf ~/quizx-aws-distributed-system
                 mkdir -p ~/quizx-aws-distributed-system
                 tar -xzf - -C ~/quizx-aws-distributed-system
               '
 
-      - name: Start application on EC2
-        if: ${{ github.event.inputs.terraform_action == 'apply' }}
+      - name: Start question app
+        env:
+          SUBMIT_APP_PRIVATE_IP: ${{ needs.terraform_apply.outputs.submit_app_ec2_private_ip }}
+          MYSQL_ROOT_PASSWORD: ${{ secrets.MYSQL_ROOT_PASSWORD }}
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          RABBITMQ_PASSWORD: ${{ secrets.RABBITMQ_PASSWORD }}
         run: |
-          ssh quizx-ec2 '
+          ssh quizx-question-app "
             cd ~/quizx-aws-distributed-system
-            sudo docker compose -f infra/docker/docker-compose.yml up -d --build
-            sudo docker compose -f infra/docker/docker-compose.yml ps
-          '
+            sudo env \\
+              MYSQL_ROOT_PASSWORD='${MYSQL_ROOT_PASSWORD}' \\
+              DB_NAME=quizx \\
+              DB_USER=quizx_app \\
+              DB_PASSWORD='${DB_PASSWORD}' \\
+              RABBITMQ_HOST=${SUBMIT_APP_PRIVATE_IP} \\
+              RABBITMQ_USER=quizx \\
+              RABBITMQ_PASSWORD='${RABBITMQ_PASSWORD}' \\
+              RABBITMQ_QUEUE=question.submitted \\
+              docker compose -f infra/docker/docker-compose-question-app-ec2.yml --profile etl \\
+                up -d --build mysql question-app etl-consumer
+            sudo docker compose -f infra/docker/docker-compose-question-app-ec2.yml --profile etl ps
+          "
 
-          echo "Question App: ${{ steps.terraform_outputs.outputs.question_app_url }}"
-          echo "Submit App: ${{ steps.terraform_outputs.outputs.submit_app_url }}"
+      - name: Check question app health
+        run: |
+          for attempt in {1..30}; do
+            if ssh quizx-question-app 'curl -fsS http://localhost:4000/health'; then
+              exit 0
+            fi
+            echo "Waiting for question app health... attempt ${attempt}/30"
+            sleep 10
+          done
+          exit 1
+
+      - name: Check ETL consumer
+        run: |
+          if ! ssh quizx-question-app \
+            "sudo docker inspect --format='{{.State.Running}}' quizx-etl-consumer | grep -qx true"; then
+            ssh quizx-question-app 'sudo docker logs --tail 100 quizx-etl-consumer || true'
+            exit 1
+          fi
+
+      - name: Revoke deployment runner SSH
+        if: ${{ always() && steps.runner_ip.outputs.authorized == 'true' }}
+        env:
+          SECURITY_GROUP_ID: ${{ needs.terraform_apply.outputs.question_app_security_group_id }}
+          RUNNER_CIDR: ${{ steps.runner_ip.outputs.cidr }}
+        run: |
+          aws ec2 revoke-security-group-ingress \
+            --group-id "$SECURITY_GROUP_ID" \
+            --protocol tcp \
+            --port 22 \
+            --cidr "$RUNNER_CIDR" 2>/dev/null || true
+
+  deploy-submit-app:
+    name: Deploy submit app
+    needs: terraform_apply
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Authorize deployment runner SSH
+        id: runner_ip
+        env:
+          SECURITY_GROUP_ID: ${{ needs.terraform_apply.outputs.submit_app_security_group_id }}
+        run: |
+          runner_ip=$(curl -fsS https://checkip.amazonaws.com | tr -d '[:space:]')
+          echo "cidr=${runner_ip}/32" >> "$GITHUB_OUTPUT"
+          existing_rule=$(aws ec2 describe-security-groups \
+            --group-ids "$SECURITY_GROUP_ID" \
+            --filters \
+              "Name=ip-permission.from-port,Values=22" \
+              "Name=ip-permission.to-port,Values=22" \
+              "Name=ip-permission.cidr,Values=${runner_ip}/32" \
+            --query 'length(SecurityGroups)' \
+            --output text)
+          if [ "$existing_rule" = "0" ]; then
+            aws ec2 authorize-security-group-ingress \
+              --group-id "$SECURITY_GROUP_ID" \
+              --protocol tcp \
+              --port 22 \
+              --cidr "${runner_ip}/32"
+            echo "authorized=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "authorized=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Configure SSH
+        env:
+          EC2_PUBLIC_IP: ${{ needs.terraform_apply.outputs.submit_app_ec2_public_ip }}
+          EC2_SSH_PRIVATE_KEY: ${{ secrets.EC2_SSH_PRIVATE_KEY }}
+        run: |
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "$EC2_SSH_PRIVATE_KEY" > ~/.ssh/quizx-ec2-key
+          chmod 600 ~/.ssh/quizx-ec2-key
+          cat > ~/.ssh/config <<EOF
+          Host quizx-submit-app
+            HostName ${EC2_PUBLIC_IP}
+            User ubuntu
+            IdentityFile ~/.ssh/quizx-ec2-key
+            StrictHostKeyChecking no
+            UserKnownHostsFile /dev/null
+          EOF
+          chmod 600 ~/.ssh/config
+
+      - name: Wait for submit EC2 Docker readiness
+        run: |
+          for attempt in {1..30}; do
+            if ssh quizx-submit-app 'cloud-init status --wait || true; sudo docker --version && sudo docker compose version'; then
+              exit 0
+            fi
+            echo "Waiting for submit app EC2... attempt ${attempt}/30"
+            sleep 10
+          done
+          exit 1
+
+      - name: Copy application files to submit EC2
+        run: |
+          tar \
+            --exclude='.git' \
+            --exclude='aws' \
+            --exclude='**/node_modules' \
+            --exclude='infra/terraform/.terraform' \
+            --exclude='infra/terraform/terraform.tfvars' \
+            --exclude='infra/terraform/terraform.tfstate*' \
+            --exclude='terraform.tfstate' \
+            --exclude='quiz_x_aws_v_1_0_0_daily_project_plan.md' \
+            --exclude='project' \
+            -czf - . \
+            | ssh quizx-submit-app '
+                rm -rf ~/quizx-aws-distributed-system
+                mkdir -p ~/quizx-aws-distributed-system
+                tar -xzf - -C ~/quizx-aws-distributed-system
+              '
+
+      - name: Start submit app
+        env:
+          QUESTION_APP_PRIVATE_IP: ${{ needs.terraform_apply.outputs.question_app_ec2_private_ip }}
+          RABBITMQ_PASSWORD: ${{ secrets.RABBITMQ_PASSWORD }}
+        run: |
+          ssh quizx-submit-app "
+            cd ~/quizx-aws-distributed-system
+            sudo env \\
+              QUESTION_APP_BASE_URL=http://${QUESTION_APP_PRIVATE_IP}:4000 \\
+              RABBITMQ_USER=quizx \\
+              RABBITMQ_PASSWORD='${RABBITMQ_PASSWORD}' \\
+              RABBITMQ_QUEUE=question.submitted \\
+              docker compose -f infra/docker/docker-compose-submit-app-ec2.yml up -d --build
+            sudo docker compose -f infra/docker/docker-compose-submit-app-ec2.yml ps
+          "
+
+      - name: Check submit app health
+        run: |
+          for attempt in {1..30}; do
+            if ssh quizx-submit-app 'curl -fsS http://localhost:4200/health'; then
+              exit 0
+            fi
+            echo "Waiting for submit app health... attempt ${attempt}/30"
+            sleep 10
+          done
+          exit 1
+
+      - name: Revoke deployment runner SSH
+        if: ${{ always() && steps.runner_ip.outputs.authorized == 'true' }}
+        env:
+          SECURITY_GROUP_ID: ${{ needs.terraform_apply.outputs.submit_app_security_group_id }}
+          RUNNER_CIDR: ${{ steps.runner_ip.outputs.cidr }}
+        run: |
+          aws ec2 revoke-security-group-ingress \
+            --group-id "$SECURITY_GROUP_ID" \
+            --protocol tcp \
+            --port 22 \
+            --cidr "$RUNNER_CIDR" 2>/dev/null || true
+
+  integration_check:
+    name: Check app-to-app integration
+    needs:
+      - terraform_apply
+      - deploy-question-app
+      - deploy-submit-app
+    runs-on: ubuntu-latest
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Authorize integration runner SSH
+        id: runner_ip
+        env:
+          SECURITY_GROUP_ID: ${{ needs.terraform_apply.outputs.submit_app_security_group_id }}
+        run: |
+          runner_ip=$(curl -fsS https://checkip.amazonaws.com | tr -d '[:space:]')
+          echo "cidr=${runner_ip}/32" >> "$GITHUB_OUTPUT"
+          existing_rule=$(aws ec2 describe-security-groups \
+            --group-ids "$SECURITY_GROUP_ID" \
+            --filters \
+              "Name=ip-permission.from-port,Values=22" \
+              "Name=ip-permission.to-port,Values=22" \
+              "Name=ip-permission.cidr,Values=${runner_ip}/32" \
+            --query 'length(SecurityGroups)' \
+            --output text)
+          if [ "$existing_rule" = "0" ]; then
+            aws ec2 authorize-security-group-ingress \
+              --group-id "$SECURITY_GROUP_ID" \
+              --protocol tcp \
+              --port 22 \
+              --cidr "${runner_ip}/32"
+            echo "authorized=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "authorized=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Configure SSH
+        env:
+          EC2_PUBLIC_IP: ${{ needs.terraform_apply.outputs.submit_app_ec2_public_ip }}
+          EC2_SSH_PRIVATE_KEY: ${{ secrets.EC2_SSH_PRIVATE_KEY }}
+        run: |
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "$EC2_SSH_PRIVATE_KEY" > ~/.ssh/quizx-ec2-key
+          chmod 600 ~/.ssh/quizx-ec2-key
+          cat > ~/.ssh/config <<EOF
+          Host quizx-submit-app
+            HostName ${EC2_PUBLIC_IP}
+            User ubuntu
+            IdentityFile ~/.ssh/quizx-ec2-key
+            StrictHostKeyChecking no
+            UserKnownHostsFile /dev/null
+          EOF
+          chmod 600 ~/.ssh/config
+
+      - name: Test categories through submit app
+        run: |
+          echo "Configured question app URL:"
+          ssh quizx-submit-app 'sudo docker exec quizx-submit-app printenv QUESTION_APP_BASE_URL'
+
+          for attempt in {1..12}; do
+            if ssh quizx-submit-app 'curl -fsS http://localhost:4200/categories'; then
+              exit 0
+            fi
+            echo "Waiting for app-to-app categories request... attempt ${attempt}/12"
+            sleep 10
+          done
+
+          echo "Direct request from inside the submit container:"
+          ssh quizx-submit-app "sudo docker exec quizx-submit-app node -e '
+            const url = process.env.QUESTION_APP_BASE_URL + \"/categories\";
+            console.log(\"Requesting \" + url);
+            fetch(url)
+              .then(async (response) => {
+                console.log(\"Status: \" + response.status);
+                console.log(await response.text());
+                process.exit(response.ok ? 0 : 1);
+              })
+              .catch((error) => {
+                console.error(error);
+                console.error(error.cause);
+                process.exit(1);
+              });
+          '"
+
+      - name: Print container diagnostics
+        if: ${{ failure() }}
+        run: |
+          ssh quizx-submit-app 'sudo docker inspect quizx-submit-app --format "{{range .Config.Env}}{{println .}}{{end}}" | grep -E "^(QUESTION_APP_BASE_URL|PORT)=" || true'
+          ssh quizx-submit-app 'sudo docker logs --tail 100 quizx-submit-app || true'
+
+      - name: Revoke integration runner SSH
+        if: ${{ always() && steps.runner_ip.outputs.authorized == 'true' }}
+        env:
+          SECURITY_GROUP_ID: ${{ needs.terraform_apply.outputs.submit_app_security_group_id }}
+          RUNNER_CIDR: ${{ steps.runner_ip.outputs.cidr }}
+        run: |
+          aws ec2 revoke-security-group-ingress \
+            --group-id "$SECURITY_GROUP_ID" \
+            --protocol tcp \
+            --port 22 \
+            --cidr "$RUNNER_CIDR" 2>/dev/null || true
+
+  apply_summary:
+    name: Deployment summary
+    if: ${{ always() && inputs.terraform_action == 'apply' }}
+    needs:
+      - terraform_apply
+      - deploy-question-app
+      - deploy-submit-app
+      - integration_check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Write apply summary
+        env:
+          TERRAFORM_RESULT: ${{ needs.terraform_apply.result }}
+          QUESTION_APP_RESULT: ${{ needs.deploy-question-app.result }}
+          SUBMIT_APP_RESULT: ${{ needs.deploy-submit-app.result }}
+          INTEGRATION_RESULT: ${{ needs.integration_check.result }}
+          QUESTION_APP_URL: ${{ needs.terraform_apply.outputs.question_app_url }}
+          SUBMIT_APP_URL: ${{ needs.terraform_apply.outputs.submit_app_url }}
+        run: |
+          {
+            echo "## Apply deployment summary"
+            echo
+            echo "| Stage | Result |"
+            echo "| --- | --- |"
+            echo "| Terraform apply | ${TERRAFORM_RESULT} |"
+            echo "| Question app EC2 | ${QUESTION_APP_RESULT} |"
+            echo "| Submit app EC2 | ${SUBMIT_APP_RESULT} |"
+            echo "| App-to-app categories | ${INTEGRATION_RESULT} |"
+            echo
+            echo "- Question app: ${QUESTION_APP_URL:-not available}"
+            echo "- Submit app: ${SUBMIT_APP_URL:-not available}"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          if [ "$TERRAFORM_RESULT" != "success" ] || \
+             [ "$QUESTION_APP_RESULT" != "success" ] || \
+             [ "$SUBMIT_APP_RESULT" != "success" ] || \
+             [ "$INTEGRATION_RESULT" != "success" ]; then
+            exit 1
+          fi
+
+  destroy_summary:
+    name: Destroy summary
+    if: ${{ always() && inputs.terraform_action == 'destroy' }}
+    needs: terraform_destroy
+    runs-on: ubuntu-latest
+    steps:
+      - name: Write destroy summary
+        env:
+          DESTROY_RESULT: ${{ needs.terraform_destroy.result }}
+        run: |
+          {
+            echo "## Destroy deployment summary"
+            echo
+            echo "Terraform destroy result: **${DESTROY_RESULT}**"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          if [ "$DESTROY_RESULT" != "success" ]; then
+            exit 1
+          fi

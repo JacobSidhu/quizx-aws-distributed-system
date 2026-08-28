@@ -1,7 +1,9 @@
 const express = require('express');
+const fs = require('fs/promises');
+const os = require('os');
 const path = require('path');
 const config = require('./config');
-const mysql = require('./db');
+const queue = require('./queue');
 
 const app = express();
 const PUBLIC_DIR = path.join(__dirname, '../public');
@@ -21,13 +23,16 @@ app.get('/health', (req, res) => {
   });
 });
 
-app.get('/ready', checkDatabaseReadiness);
-app.get('/db/health', checkDatabaseReadiness);
+app.get('/ready', checkQueueReadiness);
+app.get('/queue/health', checkQueueReadiness);
 
 app.get('/categories', async (req, res, next) => {
   try {
+    const result = await getCategoriesWithCache();
+
     res.status(200).json({
-      categories: await getCategoryNames()
+      categories: result.categories,
+      source: result.source
     });
   } catch (error) {
     next(error);
@@ -43,9 +48,9 @@ app.get('/docs', (req, res) => {
     },
     endpoints: {
       'GET /health': 'Returns process health.',
-      'GET /ready': 'Checks database connectivity.',
-      'GET /categories': 'Returns categories for the dropdown list.',
-      'POST /submit': 'Writes a submitted question to MySQL.',
+      'GET /ready': 'Checks RabbitMQ connectivity.',
+      'GET /categories': 'Returns categories from the question app, or the local cache if the question app is unavailable.',
+      'POST /submit': 'Publishes a submitted question to RabbitMQ.',
       'GET /docs': 'Returns this API documentation.'
     },
     submitPayload: {
@@ -58,13 +63,13 @@ app.get('/docs', (req, res) => {
   });
 });
 
-async function checkDatabaseReadiness(req, res, next) {
+async function checkQueueReadiness(req, res, next) {
   try {
-    await mysql.query('SELECT 1');
+    await queue.getChannel();
 
     res.status(200).json({
       status: 'ok',
-      database: config.db.name
+      queue: config.rabbitmq.queue
     });
   } catch (error) {
     next(error);
@@ -81,96 +86,100 @@ app.post('/submit', async (req, res, next) => {
     }
 
     const finalCategory = submission.newCategory || submission.category;
-    const connection = await mysql.getConnection();
+    const queuePayload = {
+      ...submission,
+      finalCategory
+    };
+    const questionRecord = {
+      question: submission.question,
+      options: submission.options,
+      answer: submission.answer
+    };
 
-    try {
-      await connection.beginTransaction();
+    await queue.publishSubmission(queuePayload);
 
-      const [existingCategories] = await connection.query(
-        'SELECT id, name FROM categories WHERE LOWER(name) = LOWER(?) LIMIT 1',
-        [finalCategory]
-      );
-      const existingCategory = existingCategories[0];
+    console.log('Submitted question published to RabbitMQ:', {
+      category: finalCategory,
+      ...questionRecord
+    });
 
-      if (submission.newCategory && existingCategory) {
-        await connection.rollback();
-
-        return res.status(409).json({
-          message: 'Category already exists. Choose it from the dropdown instead.'
-        });
-      }
-
-      let categoryId = existingCategory?.id;
-
-      if (!categoryId) {
-        const [categoryResult] = await connection.query(
-          'INSERT INTO categories (name) VALUES (?)',
-          [finalCategory]
-        );
-
-        categoryId = categoryResult.insertId;
-      }
-
-      const [duplicateQuestions] = await connection.query(
-        `
-          SELECT id
-          FROM questions
-          WHERE category_id = ?
-            AND LOWER(question_text) = LOWER(?)
-          LIMIT 1
-        `,
-        [categoryId, submission.question]
-      );
-
-      if (duplicateQuestions.length > 0) {
-        await connection.rollback();
-
-        return res.status(409).json({
-          message: 'This question already exists in the selected category.'
-        });
-      }
-
-      const [questionResult] = await connection.query(
-        'INSERT INTO questions (category_id, question_text, answer) VALUES (?, ?, ?)',
-        [categoryId, submission.question, submission.answer]
-      );
-      const questionId = questionResult.insertId;
-      const optionRows = submission.options.map((option) => {
-        return [questionId, option, option === submission.answer];
-      });
-
-      await connection.query(
-        'INSERT INTO question_options (question_id, option_text, is_correct) VALUES ?',
-        [optionRows]
-      );
-      await connection.commit();
-
-      const questionRecord = {
-        question: submission.question,
-        options: submission.options,
-        answer: submission.answer
-      };
-
-      console.log('Submitted question saved to MySQL:', {
-        category: finalCategory,
-        ...questionRecord
-      });
-
-      res.status(201).json({
-        message: 'Question submitted successfully',
-        category: finalCategory,
-        question: questionRecord
-      });
-    } catch (error) {
-      await connection.rollback();
-      throw error;
-    } finally {
-      connection.release();
-    }
+    res.status(202).json({
+      message: 'Question submitted to queue successfully',
+      category: finalCategory,
+      question: questionRecord
+    });
   } catch (error) {
     next(error);
   }
 });
+
+async function getCategoriesWithCache() {
+  try {
+    const response = await fetch(`${config.questionApp.baseUrl}/categories`);
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.message || 'Categories could not be loaded.');
+    }
+
+    const categories = normalizeCategories(data.categories);
+
+    await writeCategoryCache(categories);
+
+    return {
+      categories,
+      source: 'question-app'
+    };
+  } catch (error) {
+    const categories = await readCategoryCache();
+
+    if (categories.length > 0) {
+      return {
+        categories,
+        source: 'cache'
+      };
+    }
+
+    error.statusCode = 503;
+    throw error;
+  }
+}
+
+function normalizeCategories(categories) {
+  if (!Array.isArray(categories)) {
+    return [];
+  }
+
+  return [...new Set(categories.map(normalizeText).filter(Boolean))]
+    .sort((first, second) => first.localeCompare(second));
+}
+
+async function writeCategoryCache(categories) {
+  await fs.mkdir(path.dirname(config.categoryCache.file), {
+    recursive: true
+  });
+
+  await fs.writeFile(
+    config.categoryCache.file,
+    `${JSON.stringify({ categories }, null, 2)}${os.EOL}`,
+    'utf8'
+  );
+}
+
+async function readCategoryCache() {
+  try {
+    const cache = await fs.readFile(config.categoryCache.file, 'utf8');
+    const data = JSON.parse(cache);
+
+    return normalizeCategories(data.categories);
+  } catch (error) {
+    if (error.code === 'ENOENT') {
+      return [];
+    }
+
+    throw error;
+  }
+}
 
 app.use((req, res) => {
   res.status(404).json({
@@ -181,15 +190,15 @@ app.use((req, res) => {
 app.use((error, req, res, next) => {
   console.error(error);
 
-  res.status(500).json({
-    message: 'Internal server error'
+  res.status(error.statusCode || 500).json({
+    message: error.statusCode ? error.message : 'Internal server error'
   });
 });
 
 async function shutdown(server) {
   server.close(async () => {
     try {
-      await mysql.end();
+      await queue.close();
       process.exit(0);
     } catch (error) {
       console.error(error);
@@ -200,14 +209,6 @@ async function shutdown(server) {
 
 function normalizeText(value) {
   return typeof value === 'string' ? value.trim() : '';
-}
-
-async function getCategoryNames() {
-  const [categories] = await mysql.query(
-    'SELECT name FROM categories ORDER BY name'
-  );
-
-  return categories.map((item) => item.name);
 }
 
 function normalizeSubmission(body) {

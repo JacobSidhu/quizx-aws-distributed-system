@@ -63,6 +63,26 @@ resource "aws_security_group" "submit_app_sg" {
   }
 }
 
+resource "aws_security_group_rule" "question_app_from_submit_app" {
+  type                     = "ingress"
+  description              = "Allow submit app EC2 to read question app categories"
+  from_port                = var.question_app_port
+  to_port                  = var.question_app_port
+  protocol                 = "tcp"
+  security_group_id        = aws_security_group.question_app_sg.id
+  source_security_group_id = aws_security_group.submit_app_sg.id
+}
+
+resource "aws_security_group_rule" "rabbitmq_from_question_app" {
+  type                     = "ingress"
+  description              = "Allow ETL consumer on question app EC2 to consume RabbitMQ"
+  from_port                = var.rabbitmq_port
+  to_port                  = var.rabbitmq_port
+  protocol                 = "tcp"
+  security_group_id        = aws_security_group.submit_app_sg.id
+  source_security_group_id = aws_security_group.question_app_sg.id
+}
+
 resource "aws_key_pair" "quizx_key" {
   key_name   = coalesce(var.ec2_key_name, "${var.project_name}-ec2-key")
   public_key = var.ssh_public_key

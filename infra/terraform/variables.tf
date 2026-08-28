@@ -76,6 +76,12 @@ variable "question_app_port" {
   default     = null
 }
 
+variable "rabbitmq_port" {
+  description = "Port number for RabbitMQ AMQP traffic between EC2 instances"
+  type        = number
+  default     = 5672
+}
+
 variable "public_subnet_cidr" {
   description = "CIDR block for the public subnet"
   type        = string
@@ -109,5 +115,5 @@ variable "aws_ami_id" {
 variable "tf_state_bucket_name" {
   description = "Name of the S3 bucket for Terraform state storage"
   type        = string
-  default     = "quizx-terraform-state-2026"
+  default     = "quizx-terraform-state-379959319907"
 }

@@ -1,13 +1,14 @@
-const DEFAULT_PORT = 4000;
 const DEFAULT_DB_PORT = 3306;
-const DEFAULT_MAX_QUESTION_COUNT = 25;
+const DEFAULT_RABBITMQ_PORT = 5672;
+const DEFAULT_PREFETCH = 5;
+const DEFAULT_RECONNECT_DELAY_MS = 5000;
 
 const config = {
   app: {
-    name: 'QuizX Question App',
+    name: 'QuizX ETL Consumer',
     version: '2.0.0',
-    port: readNumber('PORT', DEFAULT_PORT),
-    maxQuestionCount: readNumber('MAX_QUESTION_COUNT', DEFAULT_MAX_QUESTION_COUNT)
+    prefetch: readNumber('QUEUE_PREFETCH', DEFAULT_PREFETCH),
+    reconnectDelayMs: readNumber('RECONNECT_DELAY_MS', DEFAULT_RECONNECT_DELAY_MS)
   },
   db: {
     host: readRequired('DB_HOST'),
@@ -15,6 +16,13 @@ const config = {
     user: readRequired('DB_USER'),
     password: readRequired('DB_PASSWORD'),
     name: readRequired('DB_NAME')
+  },
+  rabbitmq: {
+    host: readRequired('RABBITMQ_HOST'),
+    port: readNumber('RABBITMQ_PORT', DEFAULT_RABBITMQ_PORT),
+    user: readRequired('RABBITMQ_USER'),
+    password: readRequired('RABBITMQ_PASSWORD'),
+    queue: readRequired('RABBITMQ_QUEUE')
   }
 };
 

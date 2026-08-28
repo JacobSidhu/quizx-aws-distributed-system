@@ -1,11 +1,12 @@
 # QuizX AWS Distributed System
 
-**Version:** `v1.0.0-option1-terraform-cicd-ec2-docker`  
-**Status:** Foundation release  
-**Cloud Provider:** AWS  
-**Deployment Model:** Single EC2 instance, Docker Compose, Terraform, GitHub Actions  
-**Question App Prototype:** [Question App v1.0.0 Figma prototype](https://www.figma.com/proto/KCH2RPRIBkATIy3ZgRKi79/QuizX?node-id=41-113&t=FFJBauryCt84Bxe9-1)  
-**Submit App Prototype:** [Submit App v1.0.0 Figma prototype](https://www.figma.com/proto/KCH2RPRIBkATIy3ZgRKi79/QuizX?node-id=0-1&t=1fftyZSMal3CHOug-1)
+**Version:** `v2.0.0`
+**Status:** Distributed messaging release
+**Cloud Provider:** AWS
+**Deployment Model:** Two EC2 instances, Docker Compose, RabbitMQ, Terraform, GitHub Actions
+**Legacy prototypes:** [Question App v1 prototype](https://www.figma.com/proto/KCH2RPRIBkATIy3ZgRKi79/QuizX?node-id=41-113&t=FFJBauryCt84Bxe9-1) and [Submit App v1 prototype](https://www.figma.com/proto/KCH2RPRIBkATIy3ZgRKi79/QuizX?node-id=0-1&t=1fftyZSMal3CHOug-1)
+
+**Release evidence:** [v2 test evidence](docs/testing/v2-test-evidence.md) · [demonstration video](https://drive.google.com/file/d/1oShK66vFUYSngbPsM95TE_LUGg-Pae1D/view?usp=sharing)
 
 ---
 
@@ -13,22 +14,25 @@
 
 QuizX is a cloud-hosted multiple-choice question system deployed on AWS.
 
-This first release demonstrates how to provision AWS infrastructure using Terraform, deploy a multi-container Node.js application on EC2 using Docker Compose, and automate application deployment using GitHub Actions.
+Version 2 demonstrates how to provision AWS infrastructure using Terraform, deploy a distributed multi-container Node.js application across two EC2 instances, exchange messages through RabbitMQ, process them with an ETL consumer, and automate deployment using GitHub Actions.
 
-The system contains two independent Node.js Express applications:
+The system contains two Node.js Express applications and an asynchronous ETL consumer:
 
 1. **Question App** — allows users to retrieve random quiz questions by category.
 2. **Submit App** — allows users to submit new questions, answers, and categories.
+3. **ETL Consumer** — consumes RabbitMQ messages and persists submitted questions in MySQL.
 
-Both applications communicate with a private database container over a Docker network. The database is not publicly exposed, and persistent storage is provided through a Docker volume.
+The Submit App publishes durable messages to RabbitMQ on one EC2 instance. The ETL consumer on the second EC2 instance consumes those messages and writes them to a private MySQL container. Persistent data is stored in Docker volumes.
 
-This version is intentionally designed as a foundation release. It focuses on EC2, Docker, Terraform, GitHub Actions, Linux server setup, security group configuration, and professional documentation.
+This release focuses on distributed service communication, asynchronous messaging, private EC2 networking, Docker, Terraform, GitHub Actions, security groups, persistence, and release evidence.
 
 ---
 
 ## Architecture
 
-![QuizX AWS v1 Architecture](docs/architecture/quizx-aws-v1-architecture.png)
+The v2 runtime is split across two EC2 instances:
+
+![QuizX v2 distributed AWS architecture](docs/architecture/quizx-aws-v2-architecture.png)
 
 ---
 
@@ -47,24 +51,18 @@ GitHub Repository
    | - run Terraform apply/destroy workflow
    | - deploy app containers to EC2 over SSH
    v
-AWS EC2 Instance
+AWS VPC / Public Subnet
    |
-   | Docker Compose
+   |-- Question App EC2
+   |     |-- question-app :4000
+   |     |-- etl-consumer
+   |     |-- mysql :3306 (private)
    |
-   |-- question-app container
-   |     container port: 3000
-   |     host port: 4000
-   |
-   |-- submit-app container
-   |     container port: 3200
-   |     host port: 4200
-   |
-   |-- mysql container
-   |     internal port: 3306
-   |     no public exposure
-   |
-   |-- private Docker network
-   |-- persistent Docker database volume
+   |-- Submit App EC2
+         |-- submit-app :4200
+         |-- rabbitmq :5672 (security-group restricted)
+
+Submit App -> RabbitMQ -> ETL Consumer -> MySQL -> Question App
 ```
 
 ---
@@ -80,10 +78,12 @@ This project deploys:
 | Internet gateway | Allows internet access to public resources |
 | Route table | Routes public traffic through the internet gateway |
 | Security group | Controls inbound and outbound access |
-| EC2 instance | Ubuntu server used to run Docker containers |
+| EC2 instances | Separate Ubuntu servers for the question/ETL and submit/RabbitMQ workloads |
 | Docker runtime | Installed on EC2 before running Docker Compose |
 | Question app container | Node.js Express app for reading quiz questions |
 | Submit app container | Node.js Express app for submitting quiz questions |
+| RabbitMQ container | Durable asynchronous message queue for submitted questions |
+| ETL consumer container | Consumes queue messages and writes them to MySQL |
 | Database container | MySQL container for persistent quiz data |
 | Docker network | Private internal communication between containers |
 | Docker volume | Persistent database storage |
@@ -103,6 +103,7 @@ This project deploys:
 | Runtime | Docker |
 | Orchestration | Docker Compose |
 | Backend | Node.js, Express.js |
+| Messaging | RabbitMQ |
 | Database | MySQL |
 | CI/CD | GitHub Actions |
 | Remote deployment | SSH |
@@ -150,10 +151,12 @@ quizx-aws-distributed-system/
 ├── docs/
 │   ├── architecture/
 │   │   ├── quizx-aws-v1-architecture.png
+│   │   ├── quizx-aws-v2-architecture.png
 │   │   └── architecture-explanation.md
 │   ├── screenshots/
 │   ├── testing/
-│   │   └── v1-test-evidence.md
+│   │   ├── v1-test-evidence.md
+│   │   └── v2-test-evidence.md
 │   ├── security-notes.md
 │   ├── cost-notes.md
 │   └── learning-log.md
@@ -488,6 +491,9 @@ GitHub Repository → Settings → Secrets and variables → Actions
 | `AWS_AMI_ID` | Ubuntu AMI used for EC2 |
 | `SSH_PUBLIC_KEY` | Public key registered as the EC2 key pair |
 | `EC2_SSH_PRIVATE_KEY` | Private key matching `SSH_PUBLIC_KEY` for SSH deployment |
+| `MYSQL_ROOT_PASSWORD` | Root password used to initialize the MySQL container |
+| `DB_PASSWORD` | Password shared by MySQL and the database clients |
+| `RABBITMQ_PASSWORD` | Password shared by RabbitMQ publisher and consumer |
 
 For a later production-style version, GitHub OIDC with an IAM role should replace long-lived AWS access keys.
 
@@ -645,10 +651,10 @@ Restart the submit app:
 docker start quizx-submit-app
 ```
 
-Document the result honestly in:
+Document the v2 results in:
 
 ```text
-docs/testing/v1-test-evidence.md
+docs/testing/v2-test-evidence.md
 ```
 
 ---
@@ -671,7 +677,9 @@ Recommended screenshots:
 | Terraform outputs | Shows generated URLs/IPs |
 | GitHub Actions CI success | Shows automated validation |
 | GitHub Actions deploy success | Shows automated deployment |
-| Docker containers running | Shows deployed runtime |
+| Containers on both EC2 instances | Shows the split deployed runtime |
+| RabbitMQ message waiting | Shows durable queue behaviour while ETL is stopped |
+| RabbitMQ message consumed | Shows ETL recovery and message processing |
 | Question app UI | Shows user-facing question app |
 | Submit app UI | Shows user-facing submit app |
 | `/categories` API response | Shows category retrieval |
@@ -684,24 +692,8 @@ Recommended screenshots:
 
 ## Cleanup
 
-To stop containers on EC2:
-
-```bash
-docker compose -f infra/docker/docker-compose.yml down
-```
-
-To remove containers and unused images:
-
-```bash
-docker system prune -f
-```
-
-To destroy AWS infrastructure:
-
-```bash
-cd infra/terraform
-terraform destroy
-```
+Run the GitHub Actions **Deploy** workflow with `terraform_action: destroy` so
+cleanup uses the same remote state and automation path as deployment.
 
 Confirm resources are removed from AWS:
 
@@ -791,28 +783,28 @@ This release demonstrates practical understanding of:
 Release tag:
 
 ```bash
-git tag -a v1.0.0-option1-terraform-cicd-ec2-docker \
-  -m "Release QuizX AWS v1.0.0 with Terraform, GitHub Actions and Docker Compose"
+git tag -a v2.0.0 \
+  -m "Release QuizX AWS v2.0.0 distributed messaging system"
 
-git push origin v1.0.0-option1-terraform-cicd-ec2-docker
+git push origin v2.0.0
 ```
 
 Release title:
 
 ```text
-QuizX AWS v1.0.0 — Terraform + GitHub Actions + EC2 Docker Deployment
+QuizX AWS v2.0.0 — Terraform + GitHub Actions + EC2 + RabbitMQ
 ```
 
 Release summary:
 
 ```text
-This release deploys the first AWS version of QuizX using Terraform-provisioned infrastructure, Docker Compose runtime, and GitHub Actions infrastructure automation. It includes a question application, submit application, private database container, persistent storage, EC2 security group configuration, and professional project documentation.
+This release deploys QuizX across two Terraform-provisioned EC2 instances. The Submit App publishes questions to RabbitMQ, an ETL consumer persists them in MySQL, and the Question App reads the resulting data. GitHub Actions automates infrastructure provisioning, parallel application deployment, health checks, integration verification, and cleanup.
 ```
 
 ---
 
 ## Project Summary
 
-QuizX AWS v1.0.0 is a foundation cloud engineering project that deploys a multi-container Node.js quiz system on AWS EC2. It uses Terraform for infrastructure provisioning, Docker Compose for container orchestration, and GitHub Actions for automated validation and deployment.
+QuizX AWS v2.0.0 is a distributed cloud engineering project that deploys a multi-container Node.js quiz system across two AWS EC2 instances. It uses RabbitMQ for asynchronous messaging, an ETL consumer for persistence, Terraform for infrastructure provisioning, Docker Compose for container orchestration, and GitHub Actions for automated validation and deployment.
 
 The project demonstrates practical cloud engineering skills across infrastructure, Linux, networking, containers, CI/CD, security, persistence, documentation, and cost awareness.

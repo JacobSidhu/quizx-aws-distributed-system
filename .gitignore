@@ -1,5 +1,6 @@
 .env
 *.tfvars
+*.tfplan
 terraform.tfstate
 terraform.tfstate.backup
 .terraform/
@@ -7,6 +8,7 @@ terraform.tfstate.backup
 *.key
 node_modules/
 aws/
+project/
 .DS_Store
 package-lock.json
 !app/*/src/package-lock.json

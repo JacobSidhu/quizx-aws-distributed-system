@@ -11,6 +11,8 @@ RUN npm ci --omit=dev
 COPY src/ ./
 COPY public/ ../public/
 
+RUN mkdir -p /var/lib/category && chown -R node:node /var/lib/category
+
 USER node
 
 EXPOSE 4200
