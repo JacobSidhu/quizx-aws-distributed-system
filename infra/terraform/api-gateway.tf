@@ -13,14 +13,14 @@ resource "aws_apigatewayv2_integration" "api_to_question_app" {
   api_id             = aws_apigatewayv2_api.api_gateway.id
   integration_type   = "HTTP_PROXY"
   integration_method = "GET"
-  integration_uri    = "http://${aws_instance.question_app.public_ip}:${var.question_app_port}"
+  integration_uri    = "http://${aws_instance.question_app.private_ip}:${var.question_app_port}"
 }
 
 resource "aws_apigatewayv2_integration" "api_to_submit_app" {
   api_id             = aws_apigatewayv2_api.api_gateway.id
   integration_type   = "HTTP_PROXY"
   integration_method = "GET"
-  integration_uri    = "http://${aws_instance.submit_app.public_ip}:${var.submit_app_port}"
+  integration_uri    = "http://${aws_instance.submit_app.private_ip}:${var.submit_app_port}"
 }
 
 resource "aws_apigatewayv2_route" "api_gateway_route_question_app" {
