@@ -25,12 +25,12 @@ resource "aws_apigatewayv2_integration" "api_to_submit_app" {
 
 resource "aws_apigatewayv2_route" "api_gateway_route_question_app" {
   api_id    = aws_apigatewayv2_api.api_gateway.id
-  route_key = "GET /QUESTION"
+  route_key = "GET /question"
   target    = "integrations/${aws_apigatewayv2_integration.api_to_question_app.id}"
 }
 
 resource "aws_apigatewayv2_route" "api_gateway_route_submit_app" {
   api_id    = aws_apigatewayv2_api.api_gateway.id
-  route_key = "GET /SUBMIT"
+  route_key = "GET /submit"
   target    = "integrations/${aws_apigatewayv2_integration.api_to_submit_app.id}"
 }
