@@ -33,3 +33,10 @@ resource "aws_route_table_association" "public_assoc" {
   subnet_id      = aws_subnet.public.id
   route_table_id = aws_route_table.public.id
 }
+
+// VPC link for api gateway and alb
+resource "aws_vpc_link" "quizx_vpc_link" {
+  name        = "quizx-vpc-link"
+  subnet_ids = [aws_subnet.public.id]
+  security_group_ids = [aws_security_group]
+}
