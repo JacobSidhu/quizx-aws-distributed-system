@@ -83,11 +83,35 @@ resource "aws_security_group_rule" "rabbitmq_from_question_app" {
   source_security_group_id = aws_security_group.question_app_sg.id
 }
 
-resource "aws_key_pair" "quizx_key" {
-  key_name   = coalesce(var.ec2_key_name, "${var.project_name}-ec2-key")
-  public_key = var.ssh_public_key
-
-  tags = merge(local.common_tags, {
-    Name = coalesce(var.ec2_key_name, "${local.name_prefix}-ec2-key")
-  })
+// ----------------------------------------------------------
+// Security group for VPC link
+// ----------------------------------------------------------
+resource "aws_security_group" "vpc_link_sg" {
+  name = "vpc-link-sg"
+  description = "Security group for VPC link"
+  vpc_id = aws_vpc.main.id
+  
+  ingress {
+    description = "Allow traffic from API Gateway to ALB"
+    from_port = var.vpc_link_to_alb_port
+    to_port = var.vpc_link_to_alb_port
+    protocol = "tcp"
+    security_groups = [aws_security_group.alb_sg.id]
+    }
 }
+// ----------------------------------------------------------
+// Security Group for ALB
+// ----------------------------------------------------------
+  resource "aws_security_group" "alb_sg" {
+    name = "alb-sg"
+    description = "Security group for ALB"
+    vpc_id = aws_vpc.main.id
+
+    ingress {
+      description = "Allow HTTP traffic from VPC link"
+      from_port = var.alb_port
+      to_port = var.alb_port
+      protocol = "tcp"
+      security_groups = [aws_security_group.vpc_link_sg.id]
+    }
+  }
