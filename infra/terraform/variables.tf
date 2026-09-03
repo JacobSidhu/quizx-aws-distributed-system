@@ -40,6 +40,9 @@ variable "public_route_config" {
   })
 }
 
+// ----------------------------------------------------------
+// ---------CIDR variables.
+// ----------------------------------------------------------
 variable "allowed_ssh_cidr" {
   description = "CIDR block allowed to access SSH port"
   type        = string
@@ -58,6 +61,15 @@ variable "submit_app_cidr" {
   default     = null
 }
 
+variable "public_subnet_cidr" {
+  description = "CIDR block for the public subnet"
+  type        = string
+  default     = "10.0.1.0/24"
+}
+
+// ----------------------------------------------------------
+// ---------Port variables.
+// ----------------------------------------------------------
 variable "ssh_port" {
   description = "Port number for the application"
   type        = number
@@ -82,10 +94,16 @@ variable "rabbitmq_port" {
   default     = 5672
 }
 
-variable "public_subnet_cidr" {
-  description = "CIDR block for the public subnet"
-  type        = string
-  default     = "10.0.1.0/24"
+variable "alb_port" {
+  description = "Port number for the application"
+  type        = number
+  default     = 80
+}
+
+variable "vpc_link_to_alb_port" {
+  description = "Port number for the VPC link to ALB"
+  type        = number
+  default     = 80
 }
 
 variable "instance_type" {
