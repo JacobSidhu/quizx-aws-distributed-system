@@ -7,11 +7,19 @@ resource "aws_vpc" "main" {
 }
 
 // Creates Subnet for VPC
-resource "aws_subnet" "public" {
+resource "aws_subnet" "public_1" {
   vpc_id                  = aws_vpc.main.id
-  cidr_block              = var.public_subnet_cidr
-  availability_zone       = var.availability_zone
-  map_public_ip_on_launch = true
+  cidr_block              = var.public_subnet_1_cidr
+  availability_zone       = var.availability_zone_1
+  map_public_ip_on_launch = false
+}
+
+// Creates Subnet for VPC
+resource "aws_subnet" "public_2" {
+  vpc_id                  = aws_vpc.main.id
+  cidr_block              = var.public_subnet_2_cidr
+  availability_zone       = var.availability_zone_2
+  map_public_ip_on_launch = false
 }
 
 // Creates Internet Gateway for VPC
@@ -29,14 +37,23 @@ resource "aws_route_table" "public" {
 }
 
 // Associates the route table with public subnet
-resource "aws_route_table_association" "public_assoc" {
-  subnet_id      = aws_subnet.public.id
+resource "aws_route_table_association" "public_assoc_1" {
+  subnet_id      = aws_subnet.public_1.id
+  route_table_id = aws_route_table.public.id
+}
+
+// Associates the route table with public subnet
+resource "aws_route_table_association" "public_assoc_2" {
+  subnet_id      = aws_subnet.public_2.id
   route_table_id = aws_route_table.public.id
 }
 
 // VPC link for api gateway and alb
-resource "aws_vpc_link" "quizx_vpc_link" {
-  name        = "quizx-vpc-link"
-  subnet_ids = [aws_subnet.public.id]
-  security_group_ids = [aws_security_group]
+resource "aws_apigatewayv2_vpc_link" "quizx_vpc_link" {
+  name = "quizx-vpc-link"
+  subnet_ids = [
+    aws_subnet.public_1.id,
+    aws_subnet.public_2.id
+  ]
+  security_group_ids = [aws_security_group.vpc_link_sg.id]
 }

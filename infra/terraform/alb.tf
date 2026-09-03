@@ -6,10 +6,10 @@ resource "aws_lb" "quizx_alb" {
   internal           = false
   load_balancer_type = "application"
 
-  security_groups    = [
-    aws_security_group.alb_sg.id]
+  security_groups = [
+  aws_security_group.alb_sg.id]
 
-  subnets            = [
+  subnets = [
     aws_subnet.public_subnet.id,
   ]
 }
