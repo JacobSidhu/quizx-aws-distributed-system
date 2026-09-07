@@ -2,8 +2,8 @@
 resource "aws_instance" "question_app" {
   ami                         = var.aws_ami_id
   instance_type               = var.instance_type
-  subnet_id                   = aws_subnet.public.id
-  associate_public_ip_address = false
+  subnet_id                   = aws_subnet.public_1.id
+  associate_public_ip_address = true
   vpc_security_group_ids      = [aws_security_group.question_app_sg.id]
 
   key_name = aws_key_pair.quizx_key.key_name
@@ -18,8 +18,8 @@ resource "aws_instance" "question_app" {
 resource "aws_instance" "submit_app" {
   ami                         = var.aws_ami_id
   instance_type               = var.instance_type
-  subnet_id                   = aws_subnet.public.id
-  associate_public_ip_address = false
+  subnet_id                   = aws_subnet.public_2.id
+  associate_public_ip_address = true
   vpc_security_group_ids      = [aws_security_group.submit_app_sg.id]
 
   key_name = aws_key_pair.quizx_key.key_name
