@@ -77,9 +77,14 @@ output "vpc_id" {
   value       = aws_vpc.main.id
 }
 
-output "public_subnet_id" {
-  description = "ID of the public subnet containing the EC2 instance"
-  value       = aws_subnet.public.id
+output "public_subnet_1_id" {
+  description = "ID of the public subnet containing the Question appEC2 instance"
+  value       = aws_subnet.public_1.id
+}
+
+output "public_subnet_2_id" {
+  description = "ID of the public subnet containing the Submit appEC2 instance"
+  value       = aws_subnet.public_2.id
 }
 
 output "key_pair_name" {
