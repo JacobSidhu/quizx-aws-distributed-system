@@ -90,14 +90,6 @@ resource "aws_security_group" "vpc_link_sg" {
   name        = "vpc-link-sg"
   description = "Security group for VPC link"
   vpc_id      = aws_vpc.main.id
-
-  ingress {
-    description     = "Allow traffic from API Gateway to ALB"
-    from_port       = var.vpc_link_to_alb_port
-    to_port         = var.vpc_link_to_alb_port
-    protocol        = "tcp"
-    security_groups = [aws_security_group.alb_sg.id]
-  }
 }
 
 resource "aws_security_group_rule" "api_to_vpc_link" {

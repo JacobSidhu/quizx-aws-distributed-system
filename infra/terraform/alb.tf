@@ -94,7 +94,7 @@ resource "aws_lb_listener_rule" "quizx_alb_listener_rule_question_app" {
 
 resource "aws_lb_listener_rule" "quizx_alb_listener_rule_submit_app" {
   listener_arn = aws_lb_listener.quizx_alb_listener.arn
-  priority     = 100
+  priority     = 99
 
   action {
     type             = "forward"
