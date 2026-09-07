@@ -9,28 +9,17 @@ resource "aws_apigatewayv2_stage" "api_gateway_stage" {
   auto_deploy = true
 }
 
-resource "aws_apigatewayv2_integration" "api_to_question_app" {
+resource "aws_apigatewayv2_integration" "api_to_vpc_link" {
   api_id             = aws_apigatewayv2_api.api_gateway.id
   integration_type   = "HTTP_PROXY"
-  integration_method = "GET"
-  integration_uri    = "http://${aws_instance.question_app.private_ip}:${var.question_app_port}"
+  integration_method = "ANY"
+  integration_uri    = aws_lb_listener.quizx_alb_listener.arn
+  connection_type    = "VPC_LINK"
+  connection_id      = aws_apigatewayv2_vpc_link.quizx_vpc_link.id
 }
 
-resource "aws_apigatewayv2_integration" "api_to_submit_app" {
-  api_id             = aws_apigatewayv2_api.api_gateway.id
-  integration_type   = "HTTP_PROXY"
-  integration_method = "GET"
-  integration_uri    = "http://${aws_instance.submit_app.private_ip}:${var.submit_app_port}"
-}
-
-resource "aws_apigatewayv2_route" "api_gateway_route_question_app" {
+resource "aws_apigatewayv2_route" "api_gateway_route" {
   api_id    = aws_apigatewayv2_api.api_gateway.id
-  route_key = "GET /question"
-  target    = "integrations/${aws_apigatewayv2_integration.api_to_question_app.id}"
-}
-
-resource "aws_apigatewayv2_route" "api_gateway_route_submit_app" {
-  api_id    = aws_apigatewayv2_api.api_gateway.id
-  route_key = "GET /submit"
-  target    = "integrations/${aws_apigatewayv2_integration.api_to_submit_app.id}"
+  route_key = "$default"
+  target    = "integrations/${aws_apigatewayv2_integration.api_to_vpc_link.id}"
 }
