@@ -99,6 +99,17 @@ resource "aws_security_group" "vpc_link_sg" {
     security_groups = [aws_security_group.alb_sg.id]
   }
 }
+
+resource "aws_security_group_rule" "api_to_vpc_link" {
+  type                     = "ingress"
+  description              = "Allow API Gateway to access VPC link"
+  from_port                = var.vpc_link_to_alb_port
+  to_port                  = var.vpc_link_to_alb_port
+  protocol                 = "tcp"
+  security_group_id        = aws_security_group.vpc_link_sg.id
+  source_security_group_id = aws_security_group.alb_sg.id
+}
+
 // ----------------------------------------------------------
 // Security Group for ALB
 // ----------------------------------------------------------
@@ -106,12 +117,14 @@ resource "aws_security_group" "alb_sg" {
   name        = "alb-sg"
   description = "Security group for ALB"
   vpc_id      = aws_vpc.main.id
+}
 
-  ingress {
-    description     = "Allow HTTP traffic from VPC link"
-    from_port       = var.alb_port
-    to_port         = var.alb_port
-    protocol        = "tcp"
-    security_groups = [aws_security_group.vpc_link_sg.id]
-  }
+resource "aws_security_group_rule" "vpc_link_to_alb" {
+  type                     = "ingress"
+  description              = "Allow VPC link to access ALB"
+  from_port                = var.vpc_link_to_alb_port
+  to_port                  = var.vpc_link_to_alb_port
+  protocol                 = "tcp"
+  security_group_id        = aws_security_group.alb_sg.id
+  source_security_group_id = aws_security_group.vpc_link_sg.id
 }
