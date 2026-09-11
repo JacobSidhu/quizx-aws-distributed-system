@@ -27,4 +27,4 @@ ssh_public_key      = "ssh-ed25519 AAAA... your-key-comment"
 # Custom API domain. GitHub Actions supplies these from workflow inputs.
 enable_custom_domain = true
 domain_name          = "example.com"
-api_subdomain        = "api"
+api_subdomain        = "quizx"

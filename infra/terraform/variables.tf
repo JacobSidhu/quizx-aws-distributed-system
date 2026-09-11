@@ -172,10 +172,10 @@ variable "domain_name" {
 variable "api_subdomain" {
   description = "Subdomain used for the QuizX API"
   type        = string
-  default     = "api"
+  default     = "quizx"
 
   validation {
     condition     = can(regex("^[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?$", var.api_subdomain))
-    error_message = "api_subdomain must be a valid single DNS label such as api."
+    error_message = "api_subdomain must be a valid single DNS label such as quizx."
   }
 }

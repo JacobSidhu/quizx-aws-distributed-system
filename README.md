@@ -473,9 +473,10 @@ On apply, it also:
 9. Copies the checked-out repository files to EC2.
 10. Rebuilds and restarts the containers.
 
-When manually starting the workflow, supply the GoDaddy root domain and API
-subdomain inputs. For example, `example.com` and `api` produce
-`https://api.example.com`.
+The workflow defaults to the GoDaddy root domain `lecux.com` and subdomain
+`quizx`, producing `https://quizx.lecux.com`. The Question App is served from
+`/question`, the Submit App is served from `/submit`, and `/` redirects to
+`/question`.
 
 ---
 

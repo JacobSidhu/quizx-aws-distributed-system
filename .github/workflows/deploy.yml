@@ -14,11 +14,12 @@ on:
       domain_name:
         description: "GoDaddy root domain, for example example.com"
         required: true
+        default: "lecux.com"
         type: string
       api_subdomain:
         description: "Subdomain to use for API Gateway"
         required: true
-        default: "api"
+        default: "quizx"
         type: string
 
 concurrency:
@@ -602,11 +603,15 @@ jobs:
           API_CUSTOM_URL: ${{ needs.terraform_apply.outputs.api_custom_url }}
         run: |
           for attempt in {1..60}; do
-            if curl -fsS "${API_CUSTOM_URL}/health"; then
-              echo "Custom API domain is healthy: ${API_CUSTOM_URL}"
+            root_location="$(curl -sSI "${API_CUSTOM_URL}/" | tr -d '\r' | awk 'tolower($1) == "location:" { print $2 }')"
+            if curl -fsS "${API_CUSTOM_URL}/question/health" \
+              && curl -fsS "${API_CUSTOM_URL}/submit/health" \
+              && [[ "${root_location}" == "/question" ]]; then
+              echo "Question and submit routes are healthy: ${API_CUSTOM_URL}"
+              echo "Root redirects to ${root_location}"
               exit 0
             fi
-            echo "Waiting for custom-domain DNS and API health... attempt ${attempt}/60"
+            echo "Waiting for custom-domain DNS, routed services, and root redirect... attempt ${attempt}/60"
             sleep 10
           done
           exit 1

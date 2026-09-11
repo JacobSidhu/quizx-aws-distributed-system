@@ -1,5 +1,12 @@
 # Release Notes
 
+## v3.0.0
+
+- Added an ACM-secured API Gateway custom domain managed through GoDaddy DNS.
+- Added path-based Question and Submit service routing under one hostname.
+- Added navigation between the Question and Submit interfaces.
+- Added a default redirect from `/` to `/question`.
+
 ## v2.0.0
 
 - Split the runtime across dedicated Question App and Submit App EC2 instances.

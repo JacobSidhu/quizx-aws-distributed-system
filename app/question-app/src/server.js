@@ -7,13 +7,18 @@ const app = express();
 const PUBLIC_DIR = path.join(__dirname, '../public');
 
 app.use(express.json());
-app.use(express.static(PUBLIC_DIR));
+app.use('/question/assets', express.static(PUBLIC_DIR, { index: false }));
+app.use(express.static(PUBLIC_DIR, { index: false }));
 
 app.get('/', (req, res) => {
+  res.redirect(302, '/question');
+});
+
+app.get('/question', (req, res) => {
   res.sendFile(path.join(PUBLIC_DIR, 'index.html'));
 });
 
-app.get('/health', (req, res) => {
+app.get(['/health', '/question/health'], (req, res) => {
   res.status(200).json({
     status: 'ok',
     app: config.app.name,
@@ -21,8 +26,8 @@ app.get('/health', (req, res) => {
   });
 });
 
-app.get('/ready', checkDatabaseReadiness);
-app.get('/db/health', checkDatabaseReadiness);
+app.get(['/ready', '/question/ready'], checkDatabaseReadiness);
+app.get(['/db/health', '/question/db/health'], checkDatabaseReadiness);
 
 async function checkDatabaseReadiness(req, res, next) {
   try {
@@ -37,7 +42,7 @@ async function checkDatabaseReadiness(req, res, next) {
   }
 }
 
-app.get('/docs', (req, res) => {
+app.get(['/docs', '/question/docs'], (req, res) => {
   res.status(200).json({
     openapi: '3.0.0',
     info: {
@@ -55,6 +60,16 @@ app.get('/docs', (req, res) => {
       maxQuestionCount: config.app.maxQuestionCount
     }
   });
+});
+
+app.get(['/categories', '/question/categories'], async (req, res, next) => {
+  try {
+    res.status(200).json({
+      categories: await getCategoryNames()
+    });
+  } catch (error) {
+    next(error);
+  }
 });
 
 app.get(['/question/:category', '/questions/:category'], async (req, res, next) => {
@@ -136,16 +151,6 @@ app.get(['/question/:category', '/questions/:category'], async (req, res, next) 
       requestedCount: count,
       returnedCount: safeQuestions.length,
       questions: safeQuestions
-    });
-  } catch (error) {
-    next(error);
-  }
-});
-
-app.get('/categories', async (req, res, next) => {
-  try {
-    res.status(200).json({
-      categories: await getCategoryNames()
     });
   } catch (error) {
     next(error);

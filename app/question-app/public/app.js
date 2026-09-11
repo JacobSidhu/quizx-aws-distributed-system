@@ -117,7 +117,7 @@ async function loadQuestions() {
 async function loadCategories() {
     try {
         const previousCategory = elements.categorySelect.value || currentCategory;
-        const data = await getJson('/categories');
+        const data = await getJson('/question/categories');
         const categories = data.categories || [];
 
         if (!categories.length) {
