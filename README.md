@@ -462,13 +462,20 @@ The deploy workflow runs Terraform apply or destroy from GitHub Actions.
 
 On apply, it also:
 
-1. Reads the EC2 public IP from Terraform outputs.
-2. Connects to EC2 using the `EC2_SSH_PRIVATE_KEY` secret.
-3. Waits for cloud-init and Docker readiness.
-4. Copies the checked-out repository files to EC2.
-5. Runs Docker Compose on EC2.
-6. Rebuilds and restarts containers.
-7. Prints the public Question App and Submit App URLs.
+1. Requests the ACM certificate before creating the remaining infrastructure.
+2. Publishes the ACM validation CNAME through the GoDaddy Domains v3 API.
+3. Waits until ACM reports that the certificate is validated.
+4. Creates the remaining infrastructure and API Gateway custom-domain mapping.
+5. Publishes the API Gateway CNAME through the GoDaddy API.
+6. Reads the EC2 addresses and custom API URL from Terraform outputs.
+7. Connects to EC2 using the `EC2_SSH_PRIVATE_KEY` secret.
+8. Waits for cloud-init and Docker readiness.
+9. Copies the checked-out repository files to EC2.
+10. Rebuilds and restarts the containers.
+
+When manually starting the workflow, supply the GoDaddy root domain and API
+subdomain inputs. For example, `example.com` and `api` produce
+`https://api.example.com`.
 
 ---
 
@@ -494,6 +501,12 @@ GitHub Repository → Settings → Secrets and variables → Actions
 | `MYSQL_ROOT_PASSWORD` | Root password used to initialize the MySQL container |
 | `DB_PASSWORD` | Password shared by MySQL and the database clients |
 | `RABBITMQ_PASSWORD` | Password shared by RabbitMQ publisher and consumer |
+| `GO_DADDY_DNS_TOKEN` | GoDaddy Personal Access Token used to create and remove the two managed CNAME records |
+
+The GoDaddy token must be a current Personal Access Token with
+`domains.domain:read` and `domains.dns:update` permissions. The domain must use
+GoDaddy's authoritative DNS servers. Store only the token value in the secret;
+do not include `Bearer` or surrounding quotes.
 
 For a later production-style version, GitHub OIDC with an IAM role should replace long-lived AWS access keys.
 
@@ -693,7 +706,10 @@ Recommended screenshots:
 ## Cleanup
 
 Run the GitHub Actions **Deploy** workflow with `terraform_action: destroy` so
-cleanup uses the same remote state and automation path as deployment.
+cleanup uses the same remote state and automation path as deployment. Enter the
+same domain and subdomain used for apply. The workflow removes only GoDaddy DNS
+records whose values still match the Terraform-managed ACM certificate and API
+Gateway target before destroying the AWS resources.
 
 Confirm resources are removed from AWS:
 

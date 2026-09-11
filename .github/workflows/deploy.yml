@@ -11,6 +11,19 @@ on:
         options:
           - apply
           - destroy
+      domain_name:
+        description: "GoDaddy root domain, for example example.com"
+        required: true
+        type: string
+      api_subdomain:
+        description: "Subdomain to use for API Gateway"
+        required: true
+        default: "api"
+        type: string
+
+concurrency:
+  group: deploy-${{ inputs.domain_name }}-${{ inputs.api_subdomain }}
+  cancel-in-progress: false
 
 jobs:
   terraform:
@@ -58,6 +71,21 @@ jobs:
       submit_app_ec2_private_ip: ${{ steps.terraform_outputs.outputs.submit_app_ec2_private_ip }}
       submit_app_url: ${{ steps.terraform_outputs.outputs.submit_app_url }}
       submit_app_security_group_id: ${{ steps.terraform_outputs.outputs.submit_app_security_group_id }}
+      api_custom_url: ${{ steps.terraform_outputs.outputs.api_custom_url }}
+    env:
+      TF_VAR_aws_region: ${{ secrets.AWS_REGION }}
+      TF_VAR_allowed_ssh_cidr: ${{ secrets.ALLOWED_SSH_CIDR }}
+      TF_VAR_question_app_cidr: ${{ secrets.QUESTION_APP_CIDR }}
+      TF_VAR_submit_app_cidr: ${{ secrets.SUBMIT_APP_CIDR }}
+      TF_VAR_aws_ami_id: ${{ secrets.AWS_AMI_ID }}
+      TF_VAR_ssh_public_key: ${{ secrets.SSH_PUBLIC_KEY }}
+      TF_VAR_public_route_config: '{ cidr_block = "0.0.0.0/0" }'
+      TF_VAR_ssh_port: 22
+      TF_VAR_question_app_port: 4000
+      TF_VAR_submit_app_port: 4200
+      TF_VAR_enable_custom_domain: true
+      TF_VAR_domain_name: ${{ inputs.domain_name }}
+      TF_VAR_api_subdomain: ${{ inputs.api_subdomain }}
     defaults:
       run:
         working-directory: infra/terraform
@@ -80,22 +108,48 @@ jobs:
       - name: Initialize Terraform
         run: terraform init
 
+      - name: Request ACM certificate
+        run: terraform apply -auto-approve -target='aws_acm_certificate.api[0]'
+
+      - name: Publish ACM validation record in GoDaddy
+        env:
+          GO_DADDY_DNS_TOKEN: ${{ secrets.GO_DADDY_DNS_TOKEN }}
+        run: |
+          while IFS=$'\t' read -r record_name record_type record_value; do
+            ../../scripts/godaddy-dns.sh upsert \
+              "$TF_VAR_domain_name" \
+              "$record_type" \
+              "$record_name" \
+              "$record_value" \
+              600
+          done < <(
+            terraform output -json acm_validation_records \
+              | jq -r 'to_entries[].value | [.name, .type, .value] | @tsv'
+          )
+
+      - name: Wait for ACM certificate validation
+        run: |
+          certificate_arn=$(terraform output -raw acm_certificate_arn)
+          aws acm wait certificate-validated --certificate-arn "$certificate_arn"
+          echo "ACM certificate is issued. Continuing with the full infrastructure deployment."
+
       - name: Plan Terraform apply
         run: terraform plan -out=tfplan
-        env:
-          TF_VAR_aws_region: ${{ secrets.AWS_REGION }}
-          TF_VAR_allowed_ssh_cidr: ${{ secrets.ALLOWED_SSH_CIDR }}
-          TF_VAR_question_app_cidr: ${{ secrets.QUESTION_APP_CIDR }}
-          TF_VAR_submit_app_cidr: ${{ secrets.SUBMIT_APP_CIDR }}
-          TF_VAR_aws_ami_id: ${{ secrets.AWS_AMI_ID }}
-          TF_VAR_ssh_public_key: ${{ secrets.SSH_PUBLIC_KEY }}
-          TF_VAR_public_route_config: '{ cidr_block = "0.0.0.0/0" }'
-          TF_VAR_ssh_port: 22
-          TF_VAR_question_app_port: 4000
-          TF_VAR_submit_app_port: 4200
 
       - name: Apply Terraform plan
         run: terraform apply -auto-approve tfplan
+
+      - name: Publish API Gateway CNAME in GoDaddy
+        env:
+          GO_DADDY_DNS_TOKEN: ${{ secrets.GO_DADDY_DNS_TOKEN }}
+        run: |
+          api_target=$(terraform output -raw api_gateway_domain_target)
+          ../../scripts/godaddy-dns.sh upsert \
+            "$TF_VAR_domain_name" \
+            CNAME \
+            "$TF_VAR_api_subdomain" \
+            "$api_target" \
+            600
 
       - name: Read Terraform outputs
         id: terraform_outputs
@@ -108,12 +162,27 @@ jobs:
           echo "submit_app_ec2_private_ip=$(terraform output -raw submit_app_ec2_private_ip)" >> "$GITHUB_OUTPUT"
           echo "submit_app_url=$(terraform output -raw submit_app_url)" >> "$GITHUB_OUTPUT"
           echo "submit_app_security_group_id=$(terraform output -raw submit_app_security_group_id)" >> "$GITHUB_OUTPUT"
+          echo "api_custom_url=$(terraform output -raw api_custom_url)" >> "$GITHUB_OUTPUT"
 
   terraform_destroy:
     name: Terraform destroy
     if: ${{ inputs.terraform_action == 'destroy' }}
     needs: terraform
     runs-on: ubuntu-latest
+    env:
+      TF_VAR_aws_region: ${{ secrets.AWS_REGION }}
+      TF_VAR_allowed_ssh_cidr: ${{ secrets.ALLOWED_SSH_CIDR }}
+      TF_VAR_question_app_cidr: ${{ secrets.QUESTION_APP_CIDR }}
+      TF_VAR_submit_app_cidr: ${{ secrets.SUBMIT_APP_CIDR }}
+      TF_VAR_aws_ami_id: ${{ secrets.AWS_AMI_ID }}
+      TF_VAR_ssh_public_key: ${{ secrets.SSH_PUBLIC_KEY }}
+      TF_VAR_public_route_config: '{ cidr_block = "0.0.0.0/0" }'
+      TF_VAR_ssh_port: 22
+      TF_VAR_question_app_port: 4000
+      TF_VAR_submit_app_port: 4200
+      TF_VAR_enable_custom_domain: true
+      TF_VAR_domain_name: ${{ inputs.domain_name }}
+      TF_VAR_api_subdomain: ${{ inputs.api_subdomain }}
     defaults:
       run:
         working-directory: infra/terraform
@@ -138,17 +207,32 @@ jobs:
 
       - name: Plan Terraform destroy
         run: terraform plan -destroy -out=tfplan
+
+      - name: Remove managed GoDaddy DNS records
         env:
-          TF_VAR_aws_region: ${{ secrets.AWS_REGION }}
-          TF_VAR_allowed_ssh_cidr: ${{ secrets.ALLOWED_SSH_CIDR }}
-          TF_VAR_question_app_cidr: ${{ secrets.QUESTION_APP_CIDR }}
-          TF_VAR_submit_app_cidr: ${{ secrets.SUBMIT_APP_CIDR }}
-          TF_VAR_aws_ami_id: ${{ secrets.AWS_AMI_ID }}
-          TF_VAR_ssh_public_key: ${{ secrets.SSH_PUBLIC_KEY }}
-          TF_VAR_public_route_config: '{ cidr_block = "0.0.0.0/0" }'
-          TF_VAR_ssh_port: 22
-          TF_VAR_question_app_port: 4000
-          TF_VAR_submit_app_port: 4200
+          GO_DADDY_DNS_TOKEN: ${{ secrets.GO_DADDY_DNS_TOKEN }}
+        run: |
+          if api_target=$(terraform output -raw api_gateway_domain_target 2>/dev/null); then
+            ../../scripts/godaddy-dns.sh delete \
+              "$TF_VAR_domain_name" \
+              CNAME \
+              "$TF_VAR_api_subdomain" \
+              "$api_target" \
+              600
+          fi
+
+          validation_records=$(terraform output -json acm_validation_records 2>/dev/null || echo '{}')
+          while IFS=$'\t' read -r record_name record_type record_value; do
+            ../../scripts/godaddy-dns.sh delete \
+              "$TF_VAR_domain_name" \
+              "$record_type" \
+              "$record_name" \
+              "$record_value" \
+              600
+          done < <(
+            jq -r 'to_entries[].value | [.name, .type, .value] | @tsv' \
+              <<<"$validation_records"
+          )
 
       - name: Destroy infrastructure
         run: terraform apply -auto-approve tfplan
@@ -513,6 +597,20 @@ jobs:
               });
           '"
 
+      - name: Test HTTPS custom domain
+        env:
+          API_CUSTOM_URL: ${{ needs.terraform_apply.outputs.api_custom_url }}
+        run: |
+          for attempt in {1..60}; do
+            if curl -fsS "${API_CUSTOM_URL}/health"; then
+              echo "Custom API domain is healthy: ${API_CUSTOM_URL}"
+              exit 0
+            fi
+            echo "Waiting for custom-domain DNS and API health... attempt ${attempt}/60"
+            sleep 10
+          done
+          exit 1
+
       - name: Print container diagnostics
         if: ${{ failure() }}
         run: |
@@ -549,6 +647,7 @@ jobs:
           INTEGRATION_RESULT: ${{ needs.integration_check.result }}
           QUESTION_APP_URL: ${{ needs.terraform_apply.outputs.question_app_url }}
           SUBMIT_APP_URL: ${{ needs.terraform_apply.outputs.submit_app_url }}
+          API_CUSTOM_URL: ${{ needs.terraform_apply.outputs.api_custom_url }}
         run: |
           {
             echo "## Apply deployment summary"
@@ -560,6 +659,7 @@ jobs:
             echo "| Submit app EC2 | ${SUBMIT_APP_RESULT} |"
             echo "| App-to-app categories | ${INTEGRATION_RESULT} |"
             echo
+            echo "- Custom API: ${API_CUSTOM_URL:-not available}"
             echo "- Question app: ${QUESTION_APP_URL:-not available}"
             echo "- Submit app: ${SUBMIT_APP_URL:-not available}"
           } >> "$GITHUB_STEP_SUMMARY"

@@ -146,3 +146,36 @@ variable "tf_state_bucket_name" {
   type        = string
   default     = "quizx-terraform-state-379959319907"
 }
+// ----------------------------------------------------------
+// ---------Custom domain variables.
+// ----------------------------------------------------------
+variable "enable_custom_domain" {
+  description = "Whether to create the ACM certificate and API Gateway custom domain"
+  type        = bool
+  default     = false
+}
+
+variable "domain_name" {
+  description = "Domain registered with GoDaddy"
+  type        = string
+  default     = null
+
+  validation {
+    condition = (
+      !var.enable_custom_domain ||
+      can(regex("^[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?(?:\\.[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?)+$", coalesce(var.domain_name, "")))
+    )
+    error_message = "domain_name must be set to a valid root domain such as example.com when enable_custom_domain is true."
+  }
+}
+
+variable "api_subdomain" {
+  description = "Subdomain used for the QuizX API"
+  type        = string
+  default     = "api"
+
+  validation {
+    condition     = can(regex("^[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?$", var.api_subdomain))
+    error_message = "api_subdomain must be a valid single DNS label such as api."
+  }
+}
