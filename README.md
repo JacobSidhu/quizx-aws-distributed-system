@@ -1,12 +1,12 @@
+![QuizX AWS Distributed System banner](docs/images/quizx-aws-v3-banner.png)
+
 # QuizX AWS Distributed System
 
-**Version:** `v2.0.0`
+**Version:** `v3.0.0`
 **Status:** Distributed messaging release
 **Cloud Provider:** AWS
 **Deployment Model:** Two EC2 instances, Docker Compose, RabbitMQ, Terraform, GitHub Actions
 **Legacy prototypes:** [Question App v1 prototype](https://www.figma.com/proto/KCH2RPRIBkATIy3ZgRKi79/QuizX?node-id=41-113&t=FFJBauryCt84Bxe9-1) and [Submit App v1 prototype](https://www.figma.com/proto/KCH2RPRIBkATIy3ZgRKi79/QuizX?node-id=0-1&t=1fftyZSMal3CHOug-1)
-
-**Release evidence:** [v2 test evidence](docs/testing/v2-test-evidence.md) · [demonstration video](https://drive.google.com/file/d/1oShK66vFUYSngbPsM95TE_LUGg-Pae1D/view?usp=sharing)
 
 ---
 
@@ -14,7 +14,7 @@
 
 QuizX is a cloud-hosted multiple-choice question system deployed on AWS.
 
-Version 2 demonstrates how to provision AWS infrastructure using Terraform, deploy a distributed multi-container Node.js application across two EC2 instances, exchange messages through RabbitMQ, process them with an ETL consumer, and automate deployment using GitHub Actions.
+Version 3 demonstrates how placing Amazon API Gateway in front of the AWS resources improves security, resource isolation, and separation of concerns.
 
 The system contains two Node.js Express applications and an asynchronous ETL consumer:
 
