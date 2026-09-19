@@ -4,7 +4,10 @@ QuizX AWS v2.0.0 is a distributed learning release, so the security model remain
 
 ## Network Access
 
-- SSH is controlled by `allowed_ssh_cidr` in Terraform.
+- Persistent administrator SSH access is controlled by the required
+  `allowed_ssh_cidr` deploy-workflow input and Terraform variable.
+- Each GitHub-hosted runner receives a temporary `/32` SSH rule that is revoked
+  after its deployment or integration job, including on job failure.
 - Question App is exposed on port `4000`.
 - Submit App is exposed on port `4200`.
 - MySQL is not mapped to a public host port.
