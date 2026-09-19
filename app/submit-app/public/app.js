@@ -70,7 +70,7 @@ function validatePayload(payload) {
 async function loadCategories() {
     try {
         const previousCategory = elements.categorySelect.value;
-        const data = await getJson('/categories');
+        const data = await getJson('/submit/categories');
         const categories = data.categories || [];
         const placeholder = document.createElement('option');
 

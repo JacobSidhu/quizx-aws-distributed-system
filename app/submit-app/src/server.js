@@ -9,13 +9,18 @@ const app = express();
 const PUBLIC_DIR = path.join(__dirname, '../public');
 
 app.use(express.json());
-app.use(express.static(PUBLIC_DIR));
+app.use('/submit/assets', express.static(PUBLIC_DIR, { index: false }));
+app.use(express.static(PUBLIC_DIR, { index: false }));
 
 app.get('/', (req, res) => {
   res.sendFile(path.join(PUBLIC_DIR, 'index.html'));
 });
 
-app.get('/health', (req, res) => {
+app.get('/submit', (req, res) => {
+  res.sendFile(path.join(PUBLIC_DIR, 'index.html'));
+});
+
+app.get(['/health', '/submit/health'], (req, res) => {
   res.status(200).json({
     status: 'ok',
     app: config.app.name,
@@ -23,10 +28,10 @@ app.get('/health', (req, res) => {
   });
 });
 
-app.get('/ready', checkQueueReadiness);
-app.get('/queue/health', checkQueueReadiness);
+app.get(['/ready', '/submit/ready'], checkQueueReadiness);
+app.get(['/queue/health', '/submit/queue/health'], checkQueueReadiness);
 
-app.get('/categories', async (req, res, next) => {
+app.get(['/categories', '/submit/categories'], async (req, res, next) => {
   try {
     const result = await getCategoriesWithCache();
 
@@ -39,7 +44,7 @@ app.get('/categories', async (req, res, next) => {
   }
 });
 
-app.get('/docs', (req, res) => {
+app.get(['/docs', '/submit/docs'], (req, res) => {
   res.status(200).json({
     openapi: '3.0.0',
     info: {

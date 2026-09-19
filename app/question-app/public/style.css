@@ -61,6 +61,31 @@ select {
     white-space: nowrap;
 }
 
+.app-bar-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 18px;
+}
+
+.service-nav-link {
+    min-height: 42px;
+    padding: 0 18px;
+    display: inline-flex;
+    align-items: center;
+    border: 1px solid rgba(255, 255, 255, 0.72);
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.1);
+    color: var(--white);
+    font-family: "Roboto", Arial, sans-serif;
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.service-nav-link:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+
 .page-body {
     width: 100%;
     flex: 1;
@@ -143,6 +168,7 @@ select {
 .category-control select:focus-visible,
 .question-count-field input:focus-visible,
 .restart-button:focus-visible,
+.service-nav-link:focus-visible,
 .option-button:focus-visible {
     outline: 3px solid rgba(41, 41, 41, 0.3);
     outline-offset: 3px;
@@ -311,6 +337,11 @@ select {
 
     .app-bar p {
         white-space: normal;
+    }
+
+    .app-bar-actions {
+        width: 100%;
+        justify-content: space-between;
     }
 
     .page-body {

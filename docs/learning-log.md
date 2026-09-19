@@ -1,5 +1,38 @@
 # Learning Log
 
+## v3.0.0
+
+This release adds a single custom HTTPS boundary and private API Gateway
+integration in front of the v2 distributed runtime.
+
+Key learning areas:
+
+- Creating an API Gateway HTTP API with a `$default` proxy route.
+- Connecting API Gateway to an internal ALB through a VPC Link.
+- Meeting ALB subnet requirements with two Availability Zones.
+- Creating path-based listener rules and separate application target groups.
+- Issuing an ACM certificate and automating external DNS validation.
+- Managing GoDaddy validation and application CNAME records safely through its
+  Domains API.
+- Making application routes and frontend asset paths work under `/question` and
+  `/submit` prefixes.
+- Restricting VPC Link, ALB, application, and RabbitMQ traffic with
+  security-group references.
+- Adding temporary GitHub runner SSH rules and reliable failure cleanup.
+- Testing HTTPS, root redirects, path routing, service readiness, deployment,
+  and destruction through GitHub Actions.
+
+Lessons from implementation and release review:
+
+- A successful destroy run is not evidence that the same commit completed a
+  full apply and integration test; both paths must be recorded separately.
+- Release evidence should name the exact tested commit and distinguish automated
+  checks from manual end-to-end submission tests.
+- Documentation examples must use the same variable names as Terraform.
+- External DNS cleanup should be value-aware to avoid removing a record that no
+  longer belongs to the deployment.
+- Architecture, security, cost, and test documents should be updated together.
+
 ## v2.0.0
 
 This release extends the foundation into an event-driven deployment across two EC2 instances.

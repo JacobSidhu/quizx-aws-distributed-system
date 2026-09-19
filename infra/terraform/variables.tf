@@ -10,10 +10,16 @@ variable "aws_region" {
   default     = "eu-west-2"
 }
 
-variable "availability_zone" {
+variable "availability_zone_1" {
   description = "AWS availability zone for resource deployment"
   type        = string
   default     = "eu-west-2a"
+}
+
+variable "availability_zone_2" {
+  description = "AWS availability zone for resource deployment"
+  type        = string
+  default     = "eu-west-2b"
 }
 
 variable "vpc_cidr" {
@@ -40,10 +46,18 @@ variable "public_route_config" {
   })
 }
 
+// ----------------------------------------------------------
+// ---------CIDR variables.
+// ----------------------------------------------------------
 variable "allowed_ssh_cidr" {
   description = "CIDR block allowed to access SSH port"
   type        = string
   default     = null
+
+  validation {
+    condition     = var.allowed_ssh_cidr == null || can(cidrnetmask(var.allowed_ssh_cidr))
+    error_message = "allowed_ssh_cidr must be a valid IPv4 CIDR such as 203.0.113.10/32."
+  }
 }
 
 variable "question_app_cidr" {
@@ -58,6 +72,20 @@ variable "submit_app_cidr" {
   default     = null
 }
 
+variable "public_subnet_1_cidr" {
+  description = "CIDR block for the public subnet"
+  type        = string
+  default     = "10.0.1.0/24"
+}
+
+variable "public_subnet_2_cidr" {
+  description = "CIDR block for the public subnet"
+  type        = string
+  default     = "10.0.2.0/24"
+}
+// ----------------------------------------------------------
+// ---------Port variables.
+// ----------------------------------------------------------
 variable "ssh_port" {
   description = "Port number for the application"
   type        = number
@@ -82,10 +110,16 @@ variable "rabbitmq_port" {
   default     = 5672
 }
 
-variable "public_subnet_cidr" {
-  description = "CIDR block for the public subnet"
-  type        = string
-  default     = "10.0.1.0/24"
+variable "alb_port" {
+  description = "Port number for the application"
+  type        = number
+  default     = 80
+}
+
+variable "vpc_link_to_alb_port" {
+  description = "Port number for the VPC link to ALB"
+  type        = number
+  default     = 80
 }
 
 variable "instance_type" {
@@ -116,4 +150,37 @@ variable "tf_state_bucket_name" {
   description = "Name of the S3 bucket for Terraform state storage"
   type        = string
   default     = "quizx-terraform-state-379959319907"
+}
+// ----------------------------------------------------------
+// ---------Custom domain variables.
+// ----------------------------------------------------------
+variable "enable_custom_domain" {
+  description = "Whether to create the ACM certificate and API Gateway custom domain"
+  type        = bool
+  default     = false
+}
+
+variable "domain_name" {
+  description = "Domain registered with GoDaddy"
+  type        = string
+  default     = null
+
+  validation {
+    condition = (
+      !var.enable_custom_domain ||
+      can(regex("^[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?(?:\\.[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?)+$", coalesce(var.domain_name, "")))
+    )
+    error_message = "domain_name must be set to a valid root domain such as example.com when enable_custom_domain is true."
+  }
+}
+
+variable "api_subdomain" {
+  description = "Subdomain used for the QuizX API"
+  type        = string
+  default     = "quizx"
+
+  validation {
+    condition     = can(regex("^[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?$", var.api_subdomain))
+    error_message = "api_subdomain must be a valid single DNS label such as quizx."
+  }
 }

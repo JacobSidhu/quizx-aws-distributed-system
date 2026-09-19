@@ -1,6 +1,6 @@
 ## QuizX Question App
 
-Version 2.0.0 service for listing quiz categories and returning random questions
+Version 3.0.0 service for listing quiz categories and returning random questions
 without exposing answers.
 
 ### Endpoints
@@ -11,6 +11,7 @@ without exposing answers.
 - `GET /categories` - returns available category names.
 - `GET /questions/:category?count=5` - returns random questions for a category.
 - `GET /docs` - returns the API summary.
+- `GET /question` - serves the Question App UI behind the shared custom domain.
 
 ### Local Run
 
@@ -39,7 +40,7 @@ npm start
 Build the image from the repository root:
 
 ```bash
-docker build -t quizx-question-app:2.0.0 app/question-app
+docker build -t quizx-question-app:3.0.0 app/question-app
 ```
 
 The container expects database settings through environment variables and listens
