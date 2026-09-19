@@ -24,7 +24,7 @@ instance_type       = "t3.micro"
 ec2_key_name        = "quizx-ec2-key-unique-name"
 ssh_public_key      = "ssh-ed25519 AAAA... your-key-comment"
 
-# Custom API domain. GitHub Actions supplies these from workflow inputs.
+# Custom API domain. deploy.yml fixes these values to quizx.lecux.com.
 enable_custom_domain = true
-domain_name          = "example.com"
+domain_name          = "lecux.com"
 api_subdomain        = "quizx"
