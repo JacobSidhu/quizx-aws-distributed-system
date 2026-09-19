@@ -3,12 +3,12 @@
 Test date: 2026-09-19
 Branch: `feature/aws-v3`
 AWS region: `eu-west-2`
-Release status: Candidate
+Release-candidate commit: `7e2d638d2900d7bb9e390fc1209baa7fd029983b`
+Release status: **Validated for release; merge and tag pending**
 
 ## Verification Scope
 
-Version 3 adds a custom HTTPS entry point to the distributed QuizX runtime. The
-verified request path is:
+Version 3 adds a custom HTTPS entry point to the distributed QuizX runtime:
 
 ```text
 GoDaddy DNS
@@ -19,7 +19,7 @@ GoDaddy DNS
        -> /submit/*   -> Submit App
 ```
 
-The existing asynchronous data path remains:
+The asynchronous data path remains:
 
 ```text
 Submit App -> RabbitMQ -> ETL Consumer -> MySQL -> Question App
@@ -27,148 +27,137 @@ Submit App -> RabbitMQ -> ETL Consumer -> MySQL -> Question App
 
 ## Local Release-Candidate Verification
 
-Local validation was completed before creating the release-candidate commit.
-The test used the repository-root `.env` file, the full Docker Compose `etl`
-profile, and images rebuilt from the current source and lockfiles.
+Local validation was completed before the candidate commit. The test used the
+repository-root `.env` file, the full Docker Compose `etl` profile, and images
+rebuilt from the release-candidate source and lockfiles.
 
 Verified:
 
 - all three Node.js services passed their syntax checks;
-- production dependency audits reported zero known vulnerabilities after
-  compatible lockfile updates;
-- the Question App, Submit App, ETL consumer, MySQL, and RabbitMQ images built
-  successfully;
+- production dependency audits reported zero known vulnerabilities;
+- all five service images built successfully;
 - MySQL, RabbitMQ, the Question App, and the Submit App became healthy;
-- both user interfaces, health endpoints, readiness endpoints, category
-  endpoints, and API documentation endpoints responded successfully;
-- prefixed static assets were served successfully for both interfaces;
-- the Question App root route returned HTTP `302` with `/question` as its
-  redirect location;
+- the interfaces, prefixed static assets, health endpoints, readiness endpoints,
+  category endpoints, and API documentation endpoints responded successfully;
+- the root route returned HTTP `302` with `/question` as its location;
 - invalid submissions returned HTTP `400`, unknown categories returned HTTP
   `404`, and requested question counts were enforced;
-- a unique question submitted through the Submit App was published to
-  RabbitMQ, consumed by the ETL service, written to MySQL, and retrieved through
-  the Question App;
-- RabbitMQ retained a second submission while the ETL consumer was stopped;
-- the retained message was consumed and persisted after the ETL consumer
-  restarted;
-- submitted questions remained retrievable after the MySQL and Question App
+- a submitted question passed through RabbitMQ and the ETL consumer, was stored
+  in MySQL, and was retrieved through the Question App;
+- RabbitMQ retained a second submission while the ETL consumer was stopped and
+  delivered it after the consumer restarted;
+- submitted questions remained available after the MySQL and Question App
   containers were recreated without deleting the database volume;
-- the Submit App continued to retrieve the persisted categories after container
-  recreation;
-- the Submit App returned cached categories while the Question App was stopped,
-  and each application remained available while the other application was
-  temporarily stopped;
-- recent logs for all five containers contained no fatal, unhandled,
-  access-denied, or connection-refused errors;
-- Terraform formatting and configuration validation passed.
+- the Submit App returned cached categories while the Question App was stopped;
+- each application remained available while the other application was stopped;
+- recent container logs contained no fatal, unhandled, access-denied, or
+  connection-refused errors;
+- Terraform formatting and validation passed.
 
 Result: **passed**.
-
-Development verification was completed across the commits listed below. This
-record distinguishes the fully deployed architecture test from later CI and
-cleanup changes rather than presenting them as one release-commit run.
-
-| Commit | Verification |
-|---|---|
-| `e420ed6` | Complete infrastructure apply, application deployment, integration checks, and HTTPS routing |
-| `4fc2176` | Complete CI pipeline and infrastructure destruction |
 
 ## Automated CI Verification
 
-[Successful CI workflow](https://github.com/JacobSidhu/quizx-aws-distributed-system/actions/runs/35456623487)
+[Successful CI workflow #68](https://github.com/JacobSidhu/quizx-aws-distributed-system/actions/runs/35469189443)
 
-The workflow completed successfully for commit `4fc2176` and verified:
+The workflow ran against the complete release-candidate SHA and verified:
 
-- dependency installation and JavaScript syntax for the Question App;
-- dependency installation and JavaScript syntax for the Submit App;
-- dependency installation and JavaScript syntax for the ETL consumer;
-- Docker image builds for the Compose services;
-- Terraform formatting;
-- Terraform backend initialization;
-- Terraform configuration validation;
-- Terraform planning.
+- dependency installation and syntax checks for the Question App;
+- dependency installation and syntax checks for the Submit App;
+- dependency installation and syntax checks for the ETL consumer;
+- Docker Compose image builds;
+- Terraform formatting, initialization, validation, and planning.
 
 Result: **passed**.
 
-## AWS Infrastructure and Deployment Verification
+## AWS Apply and Deployment Verification
 
-[Successful apply and deployment workflow](https://github.com/JacobSidhu/quizx-aws-distributed-system/actions/runs/35455202783)
+[Successful apply and deployment workflow #114](https://github.com/JacobSidhu/quizx-aws-distributed-system/actions/runs/35469548247)
 
-The workflow completed successfully for commit `e420ed6` and verified:
+The workflow ran against the complete release-candidate SHA and verified:
 
-- Terraform initialized against the remote S3 backend;
+- Terraform checks completed against the remote S3 backend;
 - the ACM certificate request was created;
 - ACM validation records were published through the GoDaddy Domains API;
-- certificate validation completed before the remaining infrastructure apply;
+- ACM certificate validation completed successfully;
 - Terraform provisioned the API Gateway, VPC Link, internal ALB, networking,
-  security groups, and two EC2 instances;
+  security groups, and both EC2 instances;
 - the API Gateway application CNAME was published through GoDaddy;
 - the Question App, ETL consumer, MySQL, Submit App, and RabbitMQ workloads were
   deployed successfully;
-- application health checks passed on both EC2 instances;
-- the ETL consumer container check passed;
-- temporary GitHub runner SSH access was revoked after deployment.
+- health checks passed for both application deployments;
+- the ETL consumer check passed;
+- the Submit App retrieved categories from the Question App over its private EC2
+  address;
+- API Gateway routed both application health endpoints through the VPC Link and
+  internal ALB;
+- the root URL redirected to `/question`;
+- the deployment summary completed successfully.
 
 Result: **passed**.
 
-## Private Service Integration
+## Live HTTPS Verification
 
-The deployment workflow tested the Submit App category endpoint from the Submit
-EC2 instance. The Submit App successfully contacted the Question App using its
-private EC2 address and returned category data.
+Manual browser and API verification was completed while workflow #114 was
+deployed.
 
-This verified that:
+Verified:
 
-- `QUESTION_APP_BASE_URL` used the Question App private address;
-- the Submit App security group could reach Question App port `4000`;
-- cross-instance application traffic did not depend on the public custom domain;
-- the Submit App category-cache path had a valid upstream source.
-
-Result: **passed**.
-
-## HTTPS and Path-Routing Verification
-
-The integration job waited for DNS propagation and then tested the custom
-domain. It confirmed:
-
-- `https://quizx.lecux.com/question/health` returned successfully;
-- `https://quizx.lecux.com/submit/health` returned successfully;
-- the root URL returned a redirect to `/question`;
-- API Gateway reached both ALB target groups through the VPC Link;
-- the ACM-backed custom domain served the routed applications over HTTPS.
+- the ACM certificate for `quizx.lecux.com` was issued and valid;
+- the ALB console reported its scheme as `internal`;
+- `https://quizx.lecux.com/` redirected to `/question`;
+- the Question and Submit interfaces loaded successfully;
+- the public Question and Submit health endpoints returned version `3.0.0`;
+- the readiness and category routes passed;
+- a unique question submitted through the HTTPS Submit route returned HTTP
+  `202`;
+- the submitted question was retrieved through the HTTPS Question route;
+- all four options and the selected correct answer were persisted;
+- the ETL consumer showed no processing errors;
+- RabbitMQ contained no unexpected queued messages after processing;
+- both interfaces displayed adaptively at desktop and mobile widths.
 
 Result: **passed**.
 
 ## Security Verification
 
-The deployed configuration and workflow verified:
+Verified:
 
 - the ALB was internal;
-- VPC Link traffic reached the ALB through security-group references;
-- the ALB reached only the configured Question and Submit application ports;
-- RabbitMQ AMQP traffic was restricted to the Question App security group;
+- the VPC Link, ALB, application, and RabbitMQ paths used security-group
+  references;
 - MySQL had no public host-port mapping;
-- persistent administrator SSH access was controlled by an explicit CIDR;
-- GitHub-hosted runners received temporary `/32` SSH rules;
-- temporary runner rules were revoked by failure-safe cleanup steps;
-- application passwords, AWS credentials, the SSH private key, and GoDaddy
-  token were supplied through GitHub Actions secrets;
-- Terraform state remained in the encrypted S3 backend and was not committed.
+- persistent administrator SSH access was restricted to the supplied CIDR;
+- the Question App deployment job successfully revoked its temporary runner SSH
+  rule;
+- the Submit App deployment job successfully revoked its temporary runner SSH
+  rule;
+- the integration job successfully revoked its temporary runner SSH rule;
+- only the intended administrator and inter-service access rules remained after
+  deployment;
+- application secrets were supplied through GitHub Actions rather than
+  committed files;
+- Terraform state remained in the encrypted S3 backend.
 
-Result: **passed for the tested development deployments**.
+Result: **passed**.
 
 ## Cleanup Verification
 
-[Successful destroy workflow](https://github.com/JacobSidhu/quizx-aws-distributed-system/actions/runs/35456739926)
+[Successful destroy workflow #115](https://github.com/JacobSidhu/quizx-aws-distributed-system/actions/runs/35470976516)
 
-The workflow completed successfully for commit `4fc2176` and verified:
+The workflow ran against the complete release-candidate SHA and verified:
 
-- matching GoDaddy application and ACM-validation records were removed;
-- Terraform generated the destruction plan successfully;
-- the Terraform-managed QuizX infrastructure was destroyed;
-- the destroy summary completed successfully;
-- the S3 backend remained available for Terraform state history.
+- Terraform checks and the destroy plan succeeded;
+- the managed GoDaddy application and ACM-validation records were removed;
+- Terraform destroy completed successfully;
+- both EC2 instances were removed;
+- the ALB and target groups were removed;
+- API Gateway and VPC Link resources were removed;
+- the ACM certificate was removed;
+- no unexpected EBS volumes or public IPv4 resources remained;
+- the S3 Terraform backend remained available for state history;
+- AWS Billing and Cost Explorer were reviewed after cleanup;
+- the destroy summary completed successfully.
 
 Result: **passed**.
 
@@ -187,16 +176,10 @@ Result: **passed**.
 
 ## Release Readiness
 
-The v3 architecture, infrastructure provisioning, parallel application
-deployment, private service integration, HTTPS custom-domain routing, CI checks,
-and automated cleanup have all passed during development.
+The same candidate commit passed local validation, CI, Terraform planning, AWS
+provisioning, parallel application deployment, private service integration,
+custom-domain HTTPS routing, an end-to-end submission and persistence test,
+security verification, responsive-interface review, and automated cleanup.
 
-Before creating the `v3.0.0` tag, the final release-candidate commit still needs
-one consolidated apply run followed by an HTTPS question-submission test that
-confirms the ETL consumer persists the submitted question in MySQL. The matching
-destroy run should then complete successfully. These final checks ensure the tag
-is tied to one exact candidate rather than evidence collected across development
-commits.
-
-Current conclusion: **implementation validated; final release-candidate run
-required before tagging**.
+Final conclusion: **QuizX AWS v3.0.0 is validated and ready for merge and
+tagging. Merge and release remain intentionally pending.**

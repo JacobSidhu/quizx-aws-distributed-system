@@ -21,11 +21,14 @@
 
 Verification notes:
 
-- CI, Docker builds, Terraform validation, planning, deployment, service health,
-  private app integration, HTTPS routing, and infrastructure destruction
-  completed successfully during v3 development.
-- Final release evidence must record the exact release-candidate commit and its
-  apply, end-to-end submission, and destroy workflow links before tagging.
+- Release candidate `7e2d638d2900d7bb9e390fc1209baa7fd029983b`
+  passed CI, Docker builds, Terraform validation and planning, infrastructure
+  apply, parallel application deployment, private app integration, HTTPS
+  routing, manual submission and persistence verification, security checks, and
+  infrastructure destruction.
+- Evidence is recorded in `docs/testing/v3-test-evidence.md` with links to CI
+  run #68, apply/deployment run #114, and destroy run #115.
+- Merge and the `v3.0.0` tag remain intentionally pending.
 
 Known limitations:
 

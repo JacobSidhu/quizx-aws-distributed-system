@@ -5,7 +5,7 @@
 | Project field | Value |
 |---|---|
 | Version | `v3.0.0` |
-| Status | Release candidate; implementation complete, final release evidence and tag pending |
+| Status | Validated for release; merge and `v3.0.0` tag pending |
 | Cloud provider | AWS |
 | Primary URL when deployed | `https://quizx.lecux.com` |
 | Deployment model | API Gateway, VPC Link, internal Application Load Balancer, two EC2 instances, Docker Compose, RabbitMQ, MySQL, Terraform, and GitHub Actions |
@@ -26,7 +26,9 @@ workflow manages the required GoDaddy DNS records.
 
 ## Architecture
 
-![QuizX AWS v3 architecture](docs/architecture/quizx-aws-v3-architecture.png)
+[![QuizX AWS v3 architecture](docs/architecture/quizx-aws-v3-architecture.png)](docs/architecture/quizx-aws-v3-architecture.png)
+
+Select the architecture diagram to open the full-resolution image for zooming.
 
 ```text
 User
@@ -491,16 +493,17 @@ the Question App is temporarily unavailable.
 
 ## Verification Evidence
 
-- [Latest successful v3 CI run](https://github.com/JacobSidhu/quizx-aws-distributed-system/actions/runs/35456623487)
-- [Successful v3 apply, deployment, integration, and HTTPS test](https://github.com/JacobSidhu/quizx-aws-distributed-system/actions/runs/35455202783)
-- [Successful v3 destroy run](https://github.com/JacobSidhu/quizx-aws-distributed-system/actions/runs/35456739926)
+- [Release-candidate CI run #68](https://github.com/JacobSidhu/quizx-aws-distributed-system/actions/runs/35469189443)
+- [Release-candidate apply, deployment, integration, and HTTPS run #114](https://github.com/JacobSidhu/quizx-aws-distributed-system/actions/runs/35469548247)
+- [Release-candidate destroy run #115](https://github.com/JacobSidhu/quizx-aws-distributed-system/actions/runs/35470976516)
 - [v1 test evidence](docs/testing/v1-test-evidence.md)
 - [v2 test evidence](docs/testing/v2-test-evidence.md)
-- [v3 development test evidence](docs/testing/v3-test-evidence.md)
+- [v3 release-candidate test evidence](docs/testing/v3-test-evidence.md)
 
-The linked full v3 apply tested commit `e420ed6`. Before tagging, run one final
-apply and integration workflow from the intended release commit, document it in
-`docs/testing/v3-test-evidence.md`, and run the matching destroy workflow.
+All three release-candidate workflows tested commit
+`7e2d638d2900d7bb9e390fc1209baa7fd029983b`. Local validation, live HTTPS
+submission and retrieval, security verification, and AWS cleanup also passed.
+Merge and tagging remain intentionally pending.
 
 ## Cleanup
 
@@ -559,8 +562,10 @@ See [cost notes](docs/cost-notes.md).
 
 ## Release
 
-Create the intended `v3.0.0` tag only after the final release commit passes CI,
-apply, deployment, integration, HTTPS, and destroy checks:
+The release candidate passed CI, apply, deployment, integration, HTTPS, manual
+end-to-end submission, and destroy checks. Merge and tagging are intentionally
+on hold. When release approval is given, create the `v3.0.0` tag from the final
+`main` commit:
 
 ```bash
 git tag -a v3.0.0 \
