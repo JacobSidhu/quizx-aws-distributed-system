@@ -11,19 +11,17 @@ on:
         options:
           - apply
           - destroy
-      domain_name:
-        description: "GoDaddy root domain, for example example.com"
+      allowed_ssh_cidr:
+        description: "IPv4 CIDR allowed to SSH into EC2, for example 203.0.113.10/32"
         required: true
-        default: "lecux.com"
-        type: string
-      api_subdomain:
-        description: "Subdomain to use for API Gateway"
-        required: true
-        default: "quizx"
         type: string
 
+env:
+  TF_VAR_domain_name: "lecux.com"
+  TF_VAR_api_subdomain: "quizx"
+
 concurrency:
-  group: deploy-${{ inputs.domain_name }}-${{ inputs.api_subdomain }}
+  group: deploy-quizx-lecux-com
   cancel-in-progress: false
 
 jobs:
@@ -75,7 +73,7 @@ jobs:
       api_custom_url: ${{ steps.terraform_outputs.outputs.api_custom_url }}
     env:
       TF_VAR_aws_region: ${{ secrets.AWS_REGION }}
-      TF_VAR_allowed_ssh_cidr: ${{ secrets.ALLOWED_SSH_CIDR }}
+      TF_VAR_allowed_ssh_cidr: ${{ inputs.allowed_ssh_cidr }}
       TF_VAR_question_app_cidr: ${{ secrets.QUESTION_APP_CIDR }}
       TF_VAR_submit_app_cidr: ${{ secrets.SUBMIT_APP_CIDR }}
       TF_VAR_aws_ami_id: ${{ secrets.AWS_AMI_ID }}
@@ -85,8 +83,6 @@ jobs:
       TF_VAR_question_app_port: 4000
       TF_VAR_submit_app_port: 4200
       TF_VAR_enable_custom_domain: true
-      TF_VAR_domain_name: ${{ inputs.domain_name }}
-      TF_VAR_api_subdomain: ${{ inputs.api_subdomain }}
     defaults:
       run:
         working-directory: infra/terraform
@@ -172,7 +168,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       TF_VAR_aws_region: ${{ secrets.AWS_REGION }}
-      TF_VAR_allowed_ssh_cidr: ${{ secrets.ALLOWED_SSH_CIDR }}
+      TF_VAR_allowed_ssh_cidr: ${{ inputs.allowed_ssh_cidr }}
       TF_VAR_question_app_cidr: ${{ secrets.QUESTION_APP_CIDR }}
       TF_VAR_submit_app_cidr: ${{ secrets.SUBMIT_APP_CIDR }}
       TF_VAR_aws_ami_id: ${{ secrets.AWS_AMI_ID }}
@@ -182,8 +178,6 @@ jobs:
       TF_VAR_question_app_port: 4000
       TF_VAR_submit_app_port: 4200
       TF_VAR_enable_custom_domain: true
-      TF_VAR_domain_name: ${{ inputs.domain_name }}
-      TF_VAR_api_subdomain: ${{ inputs.api_subdomain }}
     defaults:
       run:
         working-directory: infra/terraform
@@ -379,7 +373,7 @@ jobs:
             --group-id "$SECURITY_GROUP_ID" \
             --protocol tcp \
             --port 22 \
-            --cidr "$RUNNER_CIDR" 2>/dev/null || true
+            --cidr "$RUNNER_CIDR"
 
   deploy-submit-app:
     name: Deploy submit app
@@ -507,7 +501,7 @@ jobs:
             --group-id "$SECURITY_GROUP_ID" \
             --protocol tcp \
             --port 22 \
-            --cidr "$RUNNER_CIDR" 2>/dev/null || true
+            --cidr "$RUNNER_CIDR"
 
   integration_check:
     name: Check app-to-app integration
@@ -632,7 +626,7 @@ jobs:
             --group-id "$SECURITY_GROUP_ID" \
             --protocol tcp \
             --port 22 \
-            --cidr "$RUNNER_CIDR" 2>/dev/null || true
+            --cidr "$RUNNER_CIDR"
 
   apply_summary:
     name: Deployment summary
