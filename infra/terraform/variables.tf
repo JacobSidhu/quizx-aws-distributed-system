@@ -53,6 +53,11 @@ variable "allowed_ssh_cidr" {
   description = "CIDR block allowed to access SSH port"
   type        = string
   default     = null
+
+  validation {
+    condition     = var.allowed_ssh_cidr == null || can(cidrnetmask(var.allowed_ssh_cidr))
+    error_message = "allowed_ssh_cidr must be a valid IPv4 CIDR such as 203.0.113.10/32."
+  }
 }
 
 variable "question_app_cidr" {
