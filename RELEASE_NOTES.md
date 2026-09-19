@@ -2,10 +2,41 @@
 
 ## v3.0.0
 
-- Added an ACM-secured API Gateway custom domain managed through GoDaddy DNS.
-- Added path-based Question and Submit service routing under one hostname.
-- Added navigation between the Question and Submit interfaces.
-- Added a default redirect from `/` to `/question`.
+- Added the ACM-secured `quizx.lecux.com` API Gateway custom domain.
+- Added automated ACM validation and application CNAME management through the
+  GoDaddy Domains API.
+- Added an API Gateway VPC Link to an internal Application Load Balancer.
+- Added separate ALB target groups, health checks, and path rules for the
+  Question and Submit services.
+- Added two public subnets in separate Availability Zones to support the ALB.
+- Added `/question` and `/submit` route prefixes, cross-application navigation,
+  and a default redirect from `/` to `/question`.
+- Added security-group boundaries between the VPC Link, ALB, applications, and
+  RabbitMQ.
+- Added a required administrator SSH CIDR deployment input and temporary
+  GitHub-runner SSH rules with failure-safe cleanup.
+- Added automated HTTPS custom-domain verification to the deployment workflow.
+- Updated compatible Node.js dependency lockfiles to resolve reported
+  production dependency advisories.
+
+Verification notes:
+
+- CI, Docker builds, Terraform validation, planning, deployment, service health,
+  private app integration, HTTPS routing, and infrastructure destruction
+  completed successfully during v3 development.
+- Final release evidence must record the exact release-candidate commit and its
+  apply, end-to-end submission, and destroy workflow links before tagging.
+
+Known limitations:
+
+- EC2 instances remain in public subnets and expose direct HTTP application
+  ports only to configured CIDRs.
+- Deployment uses SSH and long-lived AWS access-key secrets.
+- MySQL and RabbitMQ are self-managed Docker containers.
+- Runtime secrets are supplied through GitHub Actions rather than AWS Secrets
+  Manager or Parameter Store.
+- Authentication, authorization, rate limiting, WAF, and centralized
+  observability are not yet implemented.
 
 ## v2.0.0
 

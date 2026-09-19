@@ -141,7 +141,8 @@ quizx-aws-distributed-system/
 │   ├── screenshots/
 │   └── testing/
 │       ├── v1-test-evidence.md
-│       └── v2-test-evidence.md
+│       ├── v2-test-evidence.md
+│       └── v3-test-evidence.md
 ├── infra/
 │   ├── docker/
 │   │   ├── docker-compose.yml
@@ -287,7 +288,7 @@ Do not commit `.env`. Start the complete stack, including the profiled ETL
 consumer:
 
 ```bash
-docker compose --profile etl \
+docker compose --env-file .env --profile etl \
   -f infra/docker/docker-compose.yml \
   up -d --build
 ```
@@ -295,7 +296,7 @@ docker compose --profile etl \
 Inspect status and logs:
 
 ```bash
-docker compose --profile etl -f infra/docker/docker-compose.yml ps
+docker compose --env-file .env --profile etl -f infra/docker/docker-compose.yml ps
 docker logs quizx-question-app
 docker logs quizx-submit-app
 docker logs quizx-rabbitmq
@@ -317,7 +318,7 @@ curl http://localhost:4200/docs
 Stop without deleting persistent volumes:
 
 ```bash
-docker compose --profile etl -f infra/docker/docker-compose.yml down
+docker compose --env-file .env --profile etl -f infra/docker/docker-compose.yml down
 ```
 
 Add `--volumes` only when intentionally deleting local MySQL, RabbitMQ, and
@@ -495,6 +496,7 @@ the Question App is temporarily unavailable.
 - [Successful v3 destroy run](https://github.com/JacobSidhu/quizx-aws-distributed-system/actions/runs/35456739926)
 - [v1 test evidence](docs/testing/v1-test-evidence.md)
 - [v2 test evidence](docs/testing/v2-test-evidence.md)
+- [v3 development test evidence](docs/testing/v3-test-evidence.md)
 
 The linked full v3 apply tested commit `e420ed6`. Before tagging, run one final
 apply and integration workflow from the intended release commit, document it in
@@ -522,7 +524,7 @@ balancers, VPC Links, or other billable resources remain.
 ## Cost Management
 
 Potential costs include two EC2 instances and EBS volumes, public IPv4
-addresses, the ALB, API Gateway and VPC Link usage, S3 state storage, data
+addresses, the ALB, API Gateway requests, S3 state storage, data
 transfer, and AWS service logs. The design avoids NAT Gateway, RDS, Amazon MQ,
 ECS, and ECR costs. Destroy the stack after testing and review AWS Billing.
 See [cost notes](docs/cost-notes.md).
