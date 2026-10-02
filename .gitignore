@@ -1,6 +1,7 @@
 .env
 *.tfvars
 *.tfplan
+backend.hcl
 terraform.tfstate
 terraform.tfstate.backup
 .terraform/
