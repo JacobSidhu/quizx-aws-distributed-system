@@ -1,59 +1,59 @@
-// Creates VPC
+// -----------------------------------------------------------
+// Virtual private cloud -------------------------------------
+// -----------------------------------------------------------
 resource "aws_vpc" "main" {
-  cidr_block           = var.vpc_cidr
-  enable_dns_support   = var.vpc_enable_dns_support
-  enable_dns_hostnames = var.vpc_enable_dns_hostnames
+  cidr_block           = var.networking.vpc_cidr
+  enable_dns_support   = var.networking.enable_dns_support
+  enable_dns_hostnames = var.networking.enable_dns_hostnames
 
+  tags = local.common_tags
 }
 
-// Creates Subnet for VPC
-resource "aws_subnet" "public_1" {
-  vpc_id                  = aws_vpc.main.id
-  cidr_block              = var.public_subnet_1_cidr
-  availability_zone       = var.availability_zone_1
-  map_public_ip_on_launch = false
+// -----------------------------------------------------------
+// API Gateway VPC link --------------------------------------
+// -----------------------------------------------------------
+resource "aws_apigatewayv2_vpc_link" "quizx_vpc_link" {
+  name = "${local.name_prefix}-vpc-link"
+  subnet_ids = [
+    aws_subnet.public_1.id,
+    aws_subnet.public_2.id
+  ]
+  security_group_ids = [aws_security_group.vpc_link_sg.id]
+  tags               = local.common_tags
 }
 
-// Creates Subnet for VPC
-resource "aws_subnet" "public_2" {
-  vpc_id                  = aws_vpc.main.id
-  cidr_block              = var.public_subnet_2_cidr
-  availability_zone       = var.availability_zone_2
-  map_public_ip_on_launch = false
-}
-
-// Creates Internet Gateway for VPC
+// -----------------------------------------------------------
+// Internet gateway ------------------------------------------
+// -----------------------------------------------------------
 resource "aws_internet_gateway" "igw" {
   vpc_id = aws_vpc.main.id
+
+  tags = local.common_tags
 }
 
-// Creates Route Table for Internet Gateway
+// -----------------------------------------------------------
+// Public route table ----------------------------------------
+// -----------------------------------------------------------
 resource "aws_route_table" "public" {
   vpc_id = aws_vpc.main.id
+
+  tags = local.common_tags
+
   route {
     cidr_block = var.public_route_config.cidr_block
     gateway_id = aws_internet_gateway.igw.id
   }
 }
 
-// Associates the route table with public subnet
+// -----------------------------------------------------------
+// Public subnet route table associations --------------------
+// -----------------------------------------------------------
 resource "aws_route_table_association" "public_assoc_1" {
   subnet_id      = aws_subnet.public_1.id
   route_table_id = aws_route_table.public.id
 }
 
-// Associates the route table with public subnet
 resource "aws_route_table_association" "public_assoc_2" {
   subnet_id      = aws_subnet.public_2.id
   route_table_id = aws_route_table.public.id
-}
-
-// VPC link for api gateway and alb
-resource "aws_apigatewayv2_vpc_link" "quizx_vpc_link" {
-  name = "quizx-vpc-link"
-  subnet_ids = [
-    aws_subnet.public_1.id,
-    aws_subnet.public_2.id
-  ]
-  security_group_ids = [aws_security_group.vpc_link_sg.id]
 }
