@@ -1,0 +1,86 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "BootstrapStateBucket",
+      "Effect": "Allow",
+      "Action": "s3:ListBucket",
+      "Resource": "arn:aws:s3:::<state-bucket>",
+      "Condition": {
+        "StringEquals": {
+          "s3:prefix": [
+            "terraform/quizx/state/bootstrap/terraform.tfstate",
+            "terraform/quizx/state/bootstrap/terraform.tfstate.tflock"
+          ]
+        }
+      }
+    },
+    {
+      "Sid": "BootstrapStateObjects",
+      "Effect": "Allow",
+      "Action": [
+        "s3:GetObject",
+        "s3:PutObject",
+        "s3:DeleteObject"
+      ],
+      "Resource": [
+        "arn:aws:s3:::<state-bucket>/terraform/quizx/state/bootstrap/terraform.tfstate",
+        "arn:aws:s3:::<state-bucket>/terraform/quizx/state/bootstrap/terraform.tfstate.tflock"
+      ]
+    },
+    {
+      "Sid": "ManageBootstrapRoles",
+      "Effect": "Allow",
+      "Action": [
+        "iam:CreateRole",
+        "iam:GetRole",
+        "iam:UpdateRole",
+        "iam:UpdateAssumeRolePolicy",
+        "iam:DeleteRole",
+        "iam:TagRole",
+        "iam:UntagRole",
+        "iam:ListRoleTags",
+        "iam:ListRolePolicies",
+        "iam:ListAttachedRolePolicies",
+        "iam:ListInstanceProfilesForRole",
+        "iam:AttachRolePolicy",
+        "iam:DetachRolePolicy"
+      ],
+      "Resource": [
+        "arn:aws:iam::<account-id>:role/<project>-<environment>-terraform-execution-role",
+        "arn:aws:iam::<account-id>:role/<project>-<environment>-eks-cluster-role",
+        "arn:aws:iam::<account-id>:role/<project>-<environment>-eks-node-role"
+      ]
+    },
+    {
+      "Sid": "ManageQuizxPolicies",
+      "Effect": "Allow",
+      "Action": [
+        "iam:CreatePolicy",
+        "iam:GetPolicy",
+        "iam:GetPolicyVersion",
+        "iam:ListPolicyVersions",
+        "iam:CreatePolicyVersion",
+        "iam:SetDefaultPolicyVersion",
+        "iam:DeletePolicyVersion",
+        "iam:DeletePolicy",
+        "iam:ListEntitiesForPolicy",
+        "iam:TagPolicy",
+        "iam:UntagPolicy",
+        "iam:ListPolicyTags"
+      ],
+      "Resource": "arn:aws:iam::<account-id>:policy/<project>-<environment>-*"
+    },
+    {
+      "Sid": "AttachRunnerPolicyToTerraformUser",
+      "Effect": "Allow",
+      "Action": [
+        "iam:GetUser",
+        "iam:ListAttachedUserPolicies",
+        "iam:AttachUserPolicy",
+        "iam:DetachUserPolicy"
+      ],
+      "Resource": "arn:aws:iam::<account-id>:user/<terraform-user-name>"
+    }
+  ]
+}
