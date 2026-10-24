@@ -1,52 +1,23 @@
+# ------------------------------------------------------------------------------
+# Remote state backend
+# ------------------------------------------------------------------------------
+# State for this stack lives in S3 and is encrypted at rest. The bucket, key,
+# and region are deliberately left out of the code and supplied at init time,
+# so the same configuration can target any account or environment:
+#
+#   terraform init -backend-config=backend.hcl
+#
+# See backend.hcl.example for the expected values. The bootstrap state uses its
+# own key, separate from the main infrastructure state in infra/terraform.
+#
+# use_lockfile enables S3-native state locking (Terraform 1.10+): a
+# "<key>.tflock" object is held for the duration of a run, so two runs (for
+# example CI and a workstation) can never write the state at the same time.
+# No DynamoDB table is required.
+# ------------------------------------------------------------------------------
 terraform {
-  backend "s3" { encrypt = true }
-}
-
-// Creating IAM Role for Terraform automation with necessary policies attached for SQS, API Gateway, S3, and ACM access.
-resource "aws_iam_role" "quizx-terraform-automation-role" {
-  name = var.quizx_iam_role
-  assume_role_policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Action = "sts:AssumeRole"
-        Effect = "Allow"
-        Principal = {
-          AWS = "arn:aws:iam::${var.aws_account_id}:user/${var.quizx_iam_user}"
-        }
-      }
-    ]
-  })
-}
-
-resource "aws_iam_role_policy" "terraform_iam_bootstrap" {
-  name = "${var.quizx_iam_role}-iam-bootstrap"
-  role = aws_iam_role.quizx-terraform-automation-role.name
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Effect = "Allow"
-        Action = [
-          "iam:CreatePolicy",
-          "iam:DeletePolicy",
-          "iam:GetPolicy",
-          "iam:GetPolicyVersion",
-          "iam:CreatePolicyVersion",
-          "iam:DeletePolicyVersion",
-          "iam:ListPolicyVersions",
-          "iam:ListEntitiesForPolicy",
-          "iam:TagPolicy",
-          "iam:UntagPolicy",
-          "iam:GetRole",
-          "iam:ListRoles",
-          "iam:AttachRolePolicy",
-          "iam:DetachRolePolicy",
-          "iam:ListAttachedRolePolicies",
-          "iam:CreateServiceLinkedRole"
-        ]
-        Resource = "*"
-      }
-    ]
-  })
+  backend "s3" {
+    encrypt      = true
+    use_lockfile = true
+  }
 }
