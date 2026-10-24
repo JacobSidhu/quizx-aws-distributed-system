@@ -1,18 +1,18 @@
 {
   "name": "question-app",
-  "version": "3.0.0",
+  "version": "4.0.0",
   "description": "QuizX service for listing categories and serving random quiz questions.",
   "private": true,
-  "homepage": "https://github.com/jacobsidhu/quizx-aws-distribution-system#readme",
+  "homepage": "https://github.com/jacobsidhu/quizx-aws-distributed-system#readme",
   "bugs": {
-    "url": "https://github.com/jacobsidhu/quizx-aws-distribution-system/issues"
+    "url": "https://github.com/jacobsidhu/quizx-aws-distributed-system/issues"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/jacobsidhu/quizx-aws-distribution-system.git"
+    "url": "git+https://github.com/jacobsidhu/quizx-aws-distributed-system.git"
   },
   "license": "ISC",
-  "author": "jacobsidhu",
+  "author": "JacobSidhu",
   "type": "commonjs",
   "main": "server.js",
   "scripts": {

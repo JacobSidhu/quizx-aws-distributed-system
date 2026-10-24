@@ -1,0 +1,187 @@
+<!doctype html>
+<!-- Browser shell for reviewing, editing, approving, and rejecting submissions. -->
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="light" />
+    <title>QuizX Moderate</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;700&family=Roboto:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/moderate/assets/style.css" />
+    <script src="/moderate/assets/app.js" defer></script>
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="app-bar">
+        <h1>QuizX Moderate</h1>
+        <div class="app-bar-actions">
+          <a class="service-nav-link" href="/question">Browse questions</a>
+          <a class="service-nav-link" href="/submit">Submit a question</a>
+          <p>version 4.0.0</p>
+        </div>
+      </header>
+
+      <main class="page-body">
+        <section class="title-row">
+          <div>
+            <h2>Moderate Submitted Questions</h2>
+            <p>Review, correct, approve, or reject the next queued question.</p>
+          </div>
+          <div class="connection" aria-live="polite">
+            <span id="connection-dot" class="connection-dot"></span>
+            <span id="connection-text">Connecting</span>
+          </div>
+        </section>
+
+        <section id="auth-panel" class="auth-panel">
+          <div>
+            <h2>Moderator access</h2>
+            <p>
+              Enter a Cognito access token. It is held only in this browser tab.
+            </p>
+          </div>
+          <label class="auth-field">
+            <span>Access token</span>
+            <input id="access-token" type="password" autocomplete="off" />
+          </label>
+          <button id="save-token" class="primary-button" type="button">
+            Use token
+          </button>
+        </section>
+
+        <section class="queue-toolbar" aria-label="Moderation queue status">
+          <div class="queue-copy">
+            <span>Queue status</span>
+            <strong id="queue-heading">Waiting for a submission</strong>
+            <p id="queue-message">
+              The service will keep checking for new questions.
+            </p>
+          </div>
+          <button id="load-next" class="check-button" type="button">
+            Check now
+          </button>
+        </section>
+
+        <form id="moderation-form" class="moderation-form" hidden>
+          <section class="form-panel" aria-label="Moderate question form">
+            <div class="question-side">
+              <div class="form-heading">
+                <div>
+                  <p class="section-label">Current submission</p>
+                  <h2>Question review</h2>
+                </div>
+                <span id="validation-badge" class="badge">Needs review</span>
+              </div>
+
+              <label class="question-field">
+                <span class="sr-only">Question</span>
+                <textarea
+                  id="question"
+                  rows="3"
+                  maxlength="1000"
+                  required
+                ></textarea>
+              </label>
+
+              <fieldset class="options-panel">
+                <legend class="sr-only">
+                  Answers and proposed correct answer
+                </legend>
+                <div class="options-heading">
+                  <p>Edit the 4 answer options:</p>
+                  <p>Choose answer</p>
+                </div>
+                <div id="answer-list" class="option-list"></div>
+              </fieldset>
+            </div>
+
+            <aside
+              class="category-side"
+              aria-label="Question and submission details"
+            >
+              <p class="category-heading">Question details</p>
+
+              <label class="category-control">
+                <span>Category</span>
+                <input
+                  id="category"
+                  list="category-options"
+                  maxlength="100"
+                  required
+                />
+                <datalist id="category-options"></datalist>
+              </label>
+
+              <dl id="submission-meta" hidden>
+                <div>
+                  <dt>Submission</dt>
+                  <dd id="submission-id"></dd>
+                </div>
+                <div>
+                  <dt>Submitted</dt>
+                  <dd id="submitted-at"></dd>
+                </div>
+                <div>
+                  <dt>Proposed answer</dt>
+                  <dd id="proposed-answer"></dd>
+                </div>
+              </dl>
+
+              <label class="rejection-control">
+                <span>Rejection reason <small>(optional)</small></span>
+                <textarea
+                  id="rejection-reason"
+                  rows="3"
+                  maxlength="500"
+                  placeholder="Explain why this question should be rejected"
+                ></textarea>
+              </label>
+            </aside>
+          </section>
+
+          <div
+            id="validation-errors"
+            class="validation-errors"
+            role="alert"
+            hidden
+          ></div>
+
+          <footer class="action-row">
+            <button id="reject" class="reject-button" type="button">
+              Reject
+            </button>
+            <div class="primary-actions">
+              <button id="validate" class="validate-button" type="button">
+                Validate edits
+              </button>
+              <button id="approve" class="approve-button" type="submit">
+                Approve question
+              </button>
+            </div>
+          </footer>
+        </form>
+
+        <section id="empty-editor" class="empty-state-panel">
+          <div class="empty-icon" aria-hidden="true">?</div>
+          <h2>No question is currently reserved</h2>
+          <p>
+            A submitted question will appear here when it becomes available.
+          </p>
+        </section>
+
+        <div
+          id="notice"
+          class="notice"
+          role="status"
+          aria-live="polite"
+          hidden
+        ></div>
+      </main>
+    </div>
+  </body>
+</html>

@@ -1,173 +1,186 @@
-const DEFAULT_CATEGORY = 'Science';
-
+// Browser controller for the quiz page: loads categories from the API, renders a
+// randomised set of questions, and reveals the correct answer once one is picked.
 const elements = {
-    categorySelect: document.getElementById('category-select'),
-    selectedCategory: document.getElementById('selected-category'),
-    questionCount: document.getElementById('question-count'),
-    restartButton: document.getElementById('restart-button'),
-    questions: document.getElementById('question-container')
+  categorySelect: document.getElementById("category-select"),
+  selectedCategory: document.getElementById("selected-category"),
+  questionCount: document.getElementById("question-count"),
+  restartButton: document.getElementById("restart-button"),
+  questions: document.getElementById("question-container"),
 };
 
-let currentCategory = DEFAULT_CATEGORY;
+// Empty until the API returns the categories that actually exist in RDS.
+let currentCategory = "";
 
 async function getJson(url) {
-    const response = await fetch(url);
+  const response = await fetch(url);
 
-    if (!response.ok) {
-        throw new Error(`Request failed: ${response.status}`);
-    }
+  if (!response.ok) {
+    throw new Error(`Request failed: ${response.status}`);
+  }
 
-    return response.json();
+  return response.json();
 }
 
+// Falls back to one question if the input is empty or not a positive number.
+// The server applies its own upper limit (MAX_QUESTION_COUNT).
 function getRequestedCount() {
-    const count = Number.parseInt(elements.questionCount.value, 10);
-    return Number.isFinite(count) && count > 0 ? count : 1;
+  const count = Number.parseInt(elements.questionCount.value, 10);
+  return Number.isFinite(count) && count > 0 ? count : 1;
 }
 
 function clearQuestions() {
-    elements.questions.replaceChildren();
+  elements.questions.replaceChildren();
 }
 
 function showMessage(message) {
-    const messageElement = document.createElement('p');
+  const messageElement = document.createElement("p");
 
-    messageElement.className = 'empty-state';
-    messageElement.textContent = message;
+  messageElement.className = "empty-state";
+  messageElement.textContent = message;
 
-    elements.questions.replaceChildren(messageElement);
+  elements.questions.replaceChildren(messageElement);
 }
 
 function buildOptionButton(optionText) {
-    const button = document.createElement('button');
+  const button = document.createElement("button");
 
-    button.className = 'option-button';
-    button.type = 'button';
-    button.textContent = optionText;
+  button.className = "option-button";
+  button.type = "button";
+  button.textContent = optionText;
 
-    return button;
+  return button;
 }
 
+// Builds one question card. The correct option is flagged with a data
+// attribute so the click handler can highlight it without another request.
 function buildQuestionCard(question, index) {
-    const card = document.createElement('article');
-    const title = document.createElement('h2');
-    const optionList = document.createElement('div');
+  const card = document.createElement("article");
+  const title = document.createElement("h2");
+  const optionList = document.createElement("div");
 
-    card.className = 'question-block';
-    title.className = 'question-title';
-    optionList.className = 'options-list';
+  card.className = "question-block";
+  title.className = "question-title";
+  optionList.className = "options-list";
 
-    title.textContent = `${index + 1}. ${question.question}`;
+  title.textContent = `${index + 1}. ${question.question}`;
 
-    question.options.forEach((option) => {
-        const button = buildOptionButton(option);
+  question.options.forEach((option) => {
+    const button = buildOptionButton(option);
 
-        if (option === question.answer) {
-            button.dataset.correct = 'true';
-        }
+    if (option === question.answer) {
+      button.dataset.correct = "true";
+    }
 
-        optionList.appendChild(button);
-    });
+    optionList.appendChild(button);
+  });
 
-    card.append(title, optionList);
+  card.append(title, optionList);
 
-    return card;
+  return card;
 }
 
 function renderQuestions(questions) {
-    clearQuestions();
+  clearQuestions();
 
-    if (!questions.length) {
-        showMessage('No questions found for this category.');
-        return;
-    }
+  if (!questions.length) {
+    showMessage("No questions found for this category.");
+    return;
+  }
 
-    const fragment = document.createDocumentFragment();
+  const fragment = document.createDocumentFragment();
 
-    questions.forEach((question, index) => {
-        fragment.appendChild(buildQuestionCard(question, index));
-    });
+  questions.forEach((question, index) => {
+    fragment.appendChild(buildQuestionCard(question, index));
+  });
 
-    elements.questions.appendChild(fragment);
+  elements.questions.appendChild(fragment);
 }
 
 function syncSelectedCategory() {
-    currentCategory = elements.categorySelect.value || currentCategory;
-    elements.selectedCategory.textContent = currentCategory;
+  currentCategory = elements.categorySelect.value || currentCategory;
+  elements.selectedCategory.textContent = currentCategory || "None";
 }
 
 async function loadQuestions() {
-    const count = getRequestedCount();
+  const count = getRequestedCount();
 
-    elements.questionCount.value = count;
-    syncSelectedCategory();
-    showMessage('Loading questions...');
+  elements.questionCount.value = count;
+  syncSelectedCategory();
 
-    try {
-        const path = encodeURIComponent(currentCategory);
-        const data = await getJson(`/question/${path}?count=${count}`);
+  if (!currentCategory) {
+    showMessage("No categories are available yet.");
+    return;
+  }
 
-        renderQuestions(data.questions || []);
-    } catch (error) {
-        console.error(error);
-        showMessage('Questions could not be loaded. Please try again.');
-    }
+  showMessage("Loading questions...");
+
+  try {
+    const path = encodeURIComponent(currentCategory);
+    const data = await getJson(`/question/${path}?count=${count}`);
+
+    renderQuestions(data.questions || []);
+  } catch (error) {
+    console.error(error);
+    showMessage("Questions could not be loaded. Please try again.");
+  }
 }
 
+// Refreshes the category list while keeping the player's current choice when
+// it still exists; otherwise the first category returned by the API is used.
 async function loadCategories() {
-    try {
-        const previousCategory = elements.categorySelect.value || currentCategory;
-        const data = await getJson('/question/categories');
-        const categories = data.categories || [];
+  try {
+    const previousCategory = elements.categorySelect.value || currentCategory;
+    const data = await getJson("/question/categories");
+    const categories = data.categories || [];
 
-        if (!categories.length) {
-            return;
-        }
-
-        elements.categorySelect.replaceChildren();
-
-        categories.forEach((category) => {
-            const option = document.createElement('option');
-
-            option.value = category;
-            option.textContent = category;
-            elements.categorySelect.appendChild(option);
-        });
-
-        currentCategory = categories.includes(previousCategory)
-            ? previousCategory
-            : categories.includes(DEFAULT_CATEGORY)
-                ? DEFAULT_CATEGORY
-                : categories[0];
-        elements.categorySelect.value = currentCategory;
-        elements.selectedCategory.textContent = currentCategory;
-    } catch (error) {
-        console.error(error);
+    if (!categories.length) {
+      return;
     }
+
+    elements.categorySelect.replaceChildren();
+
+    categories.forEach((category) => {
+      const option = document.createElement("option");
+
+      option.value = category;
+      option.textContent = category;
+      elements.categorySelect.appendChild(option);
+    });
+
+    currentCategory = categories.includes(previousCategory)
+      ? previousCategory
+      : categories[0];
+    elements.categorySelect.value = currentCategory;
+    elements.selectedCategory.textContent = currentCategory;
+  } catch (error) {
+    console.error(error);
+  }
 }
 
 // Only one answer can be selected per question.
-elements.questions.addEventListener('click', (event) => {
-    const selectedOption = event.target.closest('.option-button');
+elements.questions.addEventListener("click", (event) => {
+  const selectedOption = event.target.closest(".option-button");
 
-    if (!selectedOption) {
-        return;
-    }
+  if (!selectedOption) {
+    return;
+  }
 
-    const optionList = selectedOption.closest('.options-list');
-    const options = optionList.querySelectorAll('.option-button');
+  const optionList = selectedOption.closest(".options-list");
+  const options = optionList.querySelectorAll(".option-button");
 
-    options.forEach((option) => {
-        option.classList.remove('is-selected');
-        option.classList.toggle('is-correct', option.dataset.correct === 'true');
-    });
+  options.forEach((option) => {
+    option.classList.remove("is-selected");
+    option.classList.toggle("is-correct", option.dataset.correct === "true");
+  });
 
-    selectedOption.classList.add('is-selected');
+  selectedOption.classList.add("is-selected");
 });
 
-// Category/count changes are applied when the user starts a new quiz.
-elements.restartButton.addEventListener('click', loadQuestions);
-elements.categorySelect.addEventListener('focus', loadCategories);
-elements.categorySelect.addEventListener('click', loadCategories);
+// Category and count changes are applied when the player starts a new quiz.
+// The list is refreshed on focus so newly approved categories appear without
+// a page reload.
+elements.restartButton.addEventListener("click", loadQuestions);
+elements.categorySelect.addEventListener("focus", loadCategories);
+elements.categorySelect.addEventListener("click", loadCategories);
 
 loadCategories().then(loadQuestions);

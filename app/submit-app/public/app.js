@@ -1,150 +1,164 @@
+// Browser controller for the submission form: loads categories, validates the
+// form before sending it, and posts the question to the Submit App API.
 const elements = {
-    form: document.getElementById('submit-form'),
-    question: document.getElementById('question'),
-    categorySelect: document.getElementById('category-select'),
-    newCategory: document.getElementById('new-category'),
-    optionInputs: Array.from(document.querySelectorAll('.option-input')),
-    answerInputs: Array.from(document.querySelectorAll('input[name="answer"]')),
-    message: document.getElementById('form-message')
+  form: document.getElementById("submit-form"),
+  question: document.getElementById("question"),
+  categorySelect: document.getElementById("category-select"),
+  newCategory: document.getElementById("new-category"),
+  optionInputs: Array.from(document.querySelectorAll(".option-input")),
+  answerInputs: Array.from(document.querySelectorAll('input[name="answer"]')),
+  message: document.getElementById("form-message"),
 };
 
 async function getJson(url, options) {
-    const response = await fetch(url, options);
-    const data = await response.json();
+  const response = await fetch(url, options);
+  const data = await response.json();
 
-    if (!response.ok) {
-        throw new Error(data.message || `Request failed: ${response.status}`);
-    }
+  if (!response.ok) {
+    throw new Error(data.message || `Request failed: ${response.status}`);
+  }
 
-    return data;
+  return data;
 }
 
-function setMessage(message, type = '') {
-    elements.message.textContent = message;
-    elements.message.dataset.type = type;
+function setMessage(message, type = "") {
+  elements.message.textContent = message;
+  elements.message.dataset.type = type;
 }
 
 function getSelectedAnswerIndex() {
-    return elements.answerInputs.findIndex((input) => input.checked);
+  return elements.answerInputs.findIndex((input) => input.checked);
 }
 
+// The selected radio button marks the correct answer; its text is sent rather
+// than its index so the server can check it against the options directly.
 function buildPayload() {
-    const options = elements.optionInputs.map((input) => input.value.trim());
-    const answerIndex = getSelectedAnswerIndex();
+  const options = elements.optionInputs.map((input) => input.value.trim());
+  const answerIndex = getSelectedAnswerIndex();
 
-    return {
-        question: elements.question.value.trim(),
-        category: elements.categorySelect.value,
-        newCategory: elements.newCategory.value.trim(),
-        options,
-        answer: answerIndex >= 0 ? options[answerIndex] : ''
-    };
+  return {
+    question: elements.question.value.trim(),
+    category: elements.categorySelect.value,
+    newCategory: elements.newCategory.value.trim(),
+    options,
+    answer: answerIndex >= 0 ? options[answerIndex] : "",
+  };
 }
 
+// Client-side checks for quick feedback only. The server validates every
+// submission again and is the source of truth.
 function validatePayload(payload) {
-    const categoryCount = [payload.category, payload.newCategory].filter(Boolean).length;
+  const categoryCount = [payload.category, payload.newCategory].filter(
+    Boolean,
+  ).length;
 
-    if (!payload.question) {
-        return 'Question is required.';
-    }
+  if (!payload.question) {
+    return "Question is required.";
+  }
 
-    if (categoryCount !== 1) {
-        return 'Choose a category or add one new category.';
-    }
+  if (categoryCount !== 1) {
+    return "Choose a category or add one new category.";
+  }
 
-    if (payload.options.some((option) => !option)) {
-        return 'All four options are required.';
-    }
+  if (payload.options.some((option) => !option)) {
+    return "All four options are required.";
+  }
 
-    if (new Set(payload.options.map((option) => option.toLowerCase())).size !== 4) {
-        return 'Options must be unique.';
-    }
+  if (
+    new Set(payload.options.map((option) => option.toLowerCase())).size !== 4
+  ) {
+    return "Options must be unique.";
+  }
 
-    if (!payload.answer) {
-        return 'Choose one correct answer.';
-    }
+  if (!payload.answer) {
+    return "Choose one correct answer.";
+  }
 
-    return '';
+  return "";
 }
 
 async function loadCategories() {
-    try {
-        const previousCategory = elements.categorySelect.value;
-        const data = await getJson('/submit/categories');
-        const categories = data.categories || [];
-        const placeholder = document.createElement('option');
+  try {
+    const previousCategory = elements.categorySelect.value;
+    const data = await getJson("/submit/categories");
+    const categories = data.categories || [];
+    const placeholder = document.createElement("option");
 
-        placeholder.value = '';
-        placeholder.textContent = 'Choose Category';
-        elements.categorySelect.replaceChildren(placeholder);
+    placeholder.value = "";
+    placeholder.textContent = "Choose category";
+    elements.categorySelect.replaceChildren(placeholder);
 
-        categories.forEach((category) => {
-            const option = document.createElement('option');
+    categories.forEach((category) => {
+      const option = document.createElement("option");
 
-            option.value = category;
-            option.textContent = category;
-            elements.categorySelect.appendChild(option);
-        });
+      option.value = category;
+      option.textContent = category;
+      elements.categorySelect.appendChild(option);
+    });
 
-        if (categories.includes(previousCategory)) {
-            elements.categorySelect.value = previousCategory;
-        }
-    } catch (error) {
-        console.error(error);
-        setMessage('Categories could not be loaded.', 'error');
+    if (categories.includes(previousCategory)) {
+      elements.categorySelect.value = previousCategory;
     }
+  } catch (error) {
+    console.error(error);
+    setMessage("Categories could not be loaded.", "error");
+  }
 }
 
 async function submitQuestion(event) {
-    event.preventDefault();
+  event.preventDefault();
 
-    const payload = buildPayload();
-    const validationError = validatePayload(payload);
+  const payload = buildPayload();
+  const validationError = validatePayload(payload);
 
-    if (validationError) {
-        setMessage(validationError, 'error');
-        return;
+  if (validationError) {
+    setMessage(validationError, "error");
+    return;
+  }
+
+  setMessage("Submitting question...");
+
+  try {
+    const data = await getJson("/submit", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    });
+
+    setMessage(data.message, "success");
+
+    // Show a new category in the dropdown straight away. It only exists in the
+    // database after a moderator approves the question.
+    if (payload.newCategory) {
+      const option = document.createElement("option");
+
+      option.value = payload.newCategory;
+      option.textContent = payload.newCategory;
+      elements.categorySelect.appendChild(option);
+      elements.categorySelect.value = payload.newCategory;
+      elements.newCategory.value = "";
     }
-
-    setMessage('Submitting question...');
-
-    try {
-        const data = await getJson('/submit', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(payload)
-        });
-
-        setMessage(data.message, 'success');
-
-        if (payload.newCategory) {
-            const option = document.createElement('option');
-
-            option.value = payload.newCategory;
-            option.textContent = payload.newCategory;
-            elements.categorySelect.appendChild(option);
-            elements.categorySelect.value = payload.newCategory;
-            elements.newCategory.value = '';
-        }
-    } catch (error) {
-        console.error(error);
-        setMessage(error.message, 'error');
-    }
+  } catch (error) {
+    console.error(error);
+    setMessage(error.message, "error");
+  }
 }
 
 function clearForm() {
-    setMessage('');
-    elements.categorySelect.value = '';
-    elements.newCategory.value = '';
+  setMessage("");
+  elements.categorySelect.value = "";
+  elements.newCategory.value = "";
 }
 
-elements.form.addEventListener('submit', submitQuestion);
-elements.form.addEventListener('reset', () => {
-    window.setTimeout(clearForm, 0);
+elements.form.addEventListener("submit", submitQuestion);
+// The native reset runs first; the timeout clears the fields it does not
+// touch, such as the status message.
+elements.form.addEventListener("reset", () => {
+  window.setTimeout(clearForm, 0);
 });
-elements.categorySelect.addEventListener('focus', loadCategories);
-elements.categorySelect.addEventListener('click', loadCategories);
+elements.categorySelect.addEventListener("focus", loadCategories);
+elements.categorySelect.addEventListener("click", loadCategories);
 
 loadCategories();

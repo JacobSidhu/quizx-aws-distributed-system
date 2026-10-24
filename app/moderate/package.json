@@ -1,0 +1,21 @@
+{
+  "name": "quizx-moderate-service",
+  "version": "4.0.0",
+  "description": "Privileged QuizX review service for approving or rejecting submitted questions.",
+  "private": true,
+  "license": "ISC",
+  "author": "JacobSidhu",
+  "type": "commonjs",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node --env-file=.env src/server.js",
+    "start:prod": "node src/server.js",
+    "check": "node --check src/config.js && node --check src/errors.js && node --check src/question.js && node --check src/review-token.js && node --check src/auth.js && node --check src/categories.js && node --check src/queue.js && node --check src/app.js && node --check src/server.js && node --check public/app.js && node --check test/categories.test.js && node --check test/question.test.js && node --check test/queue.test.js && node --check test/review-token.test.js",
+    "test": "node --test test/*.test.js"
+  },
+  "dependencies": {
+    "@aws-sdk/client-sqs": "^3.922.0",
+    "aws-jwt-verify": "^5.1.1",
+    "express": "^5.2.1"
+  }
+}

@@ -1,26 +1,24 @@
+// Converts Submit App environment variables into its AWS runtime settings.
+// Required values are checked at startup so a misconfigured service fails fast.
 const DEFAULT_PORT = 4200;
-const DEFAULT_RABBITMQ_PORT = 5672;
-const DEFAULT_CATEGORY_CACHE_FILE = '/var/lib/category/categories.json';
+const DEFAULT_CATEGORY_CACHE_FILE = "/var/lib/category/categories.json";
 
 const config = {
   app: {
-    name: 'QuizX Submit App',
-    version: '3.0.0',
-    port: readNumber('PORT', readNumber('HOST_PORT', DEFAULT_PORT))
+    name: "QuizX Submit App",
+    version: "4.0.0",
+    port: readNumber("PORT", DEFAULT_PORT),
   },
   questionApp: {
-    baseUrl: readRequired('QUESTION_APP_BASE_URL').replace(/\/$/, '')
+    baseUrl: readRequired("QUESTION_APP_BASE_URL").replace(/\/$/, ""),
   },
   categoryCache: {
-    file: process.env.CATEGORY_CACHE_FILE || DEFAULT_CATEGORY_CACHE_FILE
+    file: process.env.CATEGORY_CACHE_FILE || DEFAULT_CATEGORY_CACHE_FILE,
   },
-  rabbitmq: {
-    host: readRequired('RABBITMQ_HOST'),
-    port: readNumber('RABBITMQ_PORT', DEFAULT_RABBITMQ_PORT),
-    user: readRequired('RABBITMQ_USER'),
-    password: readRequired('RABBITMQ_PASSWORD'),
-    queue: readRequired('RABBITMQ_QUEUE')
-  }
+  aws: {
+    region: process.env.AWS_REGION || "eu-west-2",
+    submittedQueueName: readRequired("SUBMITTED_QUESTIONS_QUEUE_NAME"),
+  },
 };
 
 function readRequired(name) {

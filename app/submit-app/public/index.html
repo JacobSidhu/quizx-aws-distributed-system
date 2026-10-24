@@ -1,108 +1,170 @@
-<!DOCTYPE html>
+<!doctype html>
+<!-- Browser shell for proposing a new QuizX question. -->
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>QuizX Submit</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;700&family=Roboto:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/submit/assets/style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;700&family=Roboto:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/submit/assets/style.css" />
     <script src="/submit/assets/app.js" defer></script>
-</head>
-<body>
+  </head>
+  <body>
     <div class="app-shell">
-        <header class="app-bar">
-            <h1>QuizX Submit</h1>
-            <div class="app-bar-actions">
-                <a class="service-nav-link" href="/question">Browse questions</a>
-                <p>version 3.0.0</p>
+      <header class="app-bar">
+        <h1>QuizX Submit</h1>
+        <div class="app-bar-actions">
+          <a class="service-nav-link" href="/question">Browse questions</a>
+          <p>version 4.0.0</p>
+        </div>
+      </header>
+
+      <main class="page-body">
+        <section class="title-row">
+          <h2>Submit New Question</h2>
+        </section>
+
+        <form id="submit-form" class="submit-form">
+          <section class="form-panel" aria-label="Submit question form">
+            <div class="question-side">
+              <label class="question-field">
+                <span class="sr-only">Question</span>
+                <textarea
+                  id="question"
+                  name="question"
+                  rows="2"
+                  placeholder="Enter your question"
+                  required
+                ></textarea>
+              </label>
+
+              <div class="options-panel">
+                <div class="options-heading">
+                  <p>Add four answer options:</p>
+                  <p>Choose answer</p>
+                </div>
+
+                <div id="option-list" class="option-list">
+                  <div class="option-row">
+                    <input
+                      class="option-input"
+                      name="option"
+                      type="text"
+                      placeholder="Option 1"
+                      aria-label="Option 1"
+                      required
+                    />
+                    <label class="answer-switch">
+                      <input name="answer" type="radio" value="0" required />
+                      <span class="switch-track"
+                        ><span class="switch-handle"></span
+                      ></span>
+                      <span class="sr-only">Mark option 1 as correct</span>
+                    </label>
+                  </div>
+                  <div class="option-row">
+                    <input
+                      class="option-input"
+                      name="option"
+                      type="text"
+                      placeholder="Option 2"
+                      aria-label="Option 2"
+                      required
+                    />
+                    <label class="answer-switch">
+                      <input name="answer" type="radio" value="1" />
+                      <span class="switch-track"
+                        ><span class="switch-handle"></span
+                      ></span>
+                      <span class="sr-only">Mark option 2 as correct</span>
+                    </label>
+                  </div>
+                  <div class="option-row">
+                    <input
+                      class="option-input"
+                      name="option"
+                      type="text"
+                      placeholder="Option 3"
+                      aria-label="Option 3"
+                      required
+                    />
+                    <label class="answer-switch">
+                      <input name="answer" type="radio" value="2" />
+                      <span class="switch-track"
+                        ><span class="switch-handle"></span
+                      ></span>
+                      <span class="sr-only">Mark option 3 as correct</span>
+                    </label>
+                  </div>
+                  <div class="option-row">
+                    <input
+                      class="option-input"
+                      name="option"
+                      type="text"
+                      placeholder="Option 4"
+                      aria-label="Option 4"
+                      required
+                    />
+                    <label class="answer-switch">
+                      <input name="answer" type="radio" value="3" />
+                      <span class="switch-track"
+                        ><span class="switch-handle"></span
+                      ></span>
+                      <span class="sr-only">Mark option 4 as correct</span>
+                    </label>
+                  </div>
+                </div>
+              </div>
             </div>
-        </header>
 
-        <main class="page-body">
-            <section class="title-row">
-                <h2>Submit New Question</h2>
-            </section>
+            <aside class="category-side" aria-label="Category controls">
+              <p>Category</p>
 
-            <form id="submit-form" class="submit-form">
-                <section class="form-panel" aria-label="Submit question form">
-                    <div class="question-side">
-                        <label class="question-field">
-                            <span class="sr-only">Question</span>
-                            <textarea id="question" name="question" rows="2" required>What is the chemical symbol for gold?</textarea>
-                        </label>
+              <label class="category-control">
+                <span class="sr-only">Choose category</span>
+                <select
+                  id="category-select"
+                  name="category"
+                  aria-label="Choose category"
+                >
+                  <option value="">Choose category</option>
+                </select>
+              </label>
 
-                        <div class="options-panel">
-                            <div class="options-heading">
-                                <p>Add 4 Options for the questions:</p>
-                                <p>Choose answer</p>
-                            </div>
+              <span class="or-label">Or</span>
 
-                            <div id="option-list" class="option-list">
-                                <div class="option-row">
-                                    <input class="option-input" name="option" type="text" value="AU" aria-label="Option 1" required>
-                                    <label class="answer-switch">
-                                        <input name="answer" type="radio" value="0" required>
-                                        <span class="switch-track"><span class="switch-handle"></span></span>
-                                        <span class="sr-only">Mark option 1 as correct</span>
-                                    </label>
-                                </div>
-                                <div class="option-row">
-                                    <input class="option-input" name="option" type="text" value="Ag" aria-label="Option 2" required>
-                                    <label class="answer-switch">
-                                        <input name="answer" type="radio" value="1">
-                                        <span class="switch-track"><span class="switch-handle"></span></span>
-                                        <span class="sr-only">Mark option 2 as correct</span>
-                                    </label>
-                                </div>
-                                <div class="option-row">
-                                    <input class="option-input" name="option" type="text" value="Fe" aria-label="Option 3" required>
-                                    <label class="answer-switch">
-                                        <input name="answer" type="radio" value="2">
-                                        <span class="switch-track"><span class="switch-handle"></span></span>
-                                        <span class="sr-only">Mark option 3 as correct</span>
-                                    </label>
-                                </div>
-                                <div class="option-row">
-                                    <input class="option-input" name="option" type="text" value="Pb" aria-label="Option 4" required>
-                                    <label class="answer-switch">
-                                        <input name="answer" type="radio" value="3">
-                                        <span class="switch-track"><span class="switch-handle"></span></span>
-                                        <span class="sr-only">Mark option 4 as correct</span>
-                                    </label>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+              <label class="new-category-control">
+                <span>Add new category</span>
+                <input
+                  id="new-category"
+                  name="newCategory"
+                  type="text"
+                  placeholder="New category name"
+                />
+              </label>
+            </aside>
+          </section>
 
-                    <aside class="category-side" aria-label="Category controls">
-                        <p>Add New Category</p>
+          <p
+            id="form-message"
+            class="form-message"
+            role="status"
+            aria-live="polite"
+          ></p>
 
-                        <label class="category-control">
-                            <span class="sr-only">Choose Category</span>
-                            <select id="category-select" name="category" aria-label="Choose Category">
-                                <option value="">Choose Category</option>
-                            </select>
-                        </label>
-
-                        <span class="or-label">Or</span>
-
-                        <label class="new-category-control">
-                            <span>Add New Category</span>
-                            <input id="new-category" name="newCategory" type="text" placeholder="Label">
-                        </label>
-                    </aside>
-                </section>
-
-                <p id="form-message" class="form-message" role="status" aria-live="polite"></p>
-
-                <footer class="action-row">
-                    <button class="clear-button" id="clear-button" type="reset">Clear</button>
-                    <button class="submit-button" type="submit">Submit</button>
-                </footer>
-            </form>
-        </main>
+          <footer class="action-row">
+            <button class="clear-button" id="clear-button" type="reset">
+              Clear
+            </button>
+            <button class="submit-button" type="submit">Submit</button>
+          </footer>
+        </form>
+      </main>
     </div>
-</body>
+  </body>
 </html>

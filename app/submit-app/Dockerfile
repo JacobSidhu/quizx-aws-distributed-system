@@ -1,3 +1,4 @@
+# Production image for the Submit App API and browser UI.
 FROM node:24-alpine
 
 WORKDIR /app
