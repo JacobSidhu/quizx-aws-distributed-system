@@ -6,6 +6,7 @@ on:
   workflow_dispatch:
 
 permissions:
+  id-token: write
   contents: read
 
 env:
@@ -34,3 +35,10 @@ jobs:
           npx --yes prettier@3.6.2 --check
           "app/**/*.{js,json,html,css}"
           ".github/workflows/ci.yml"
+
+      - name: Configuring AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{secrets.AWS_BOOTSTRAP_ROLE_ARN}}
+          role-session-name: quizx-${{github.job}}-${{github.run_id}}
+          aws-region: ${{secrets.AWS_REGION}}
