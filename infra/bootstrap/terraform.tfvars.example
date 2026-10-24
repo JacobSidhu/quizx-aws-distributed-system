@@ -1,0 +1,20 @@
+# Copy to terraform.tfvars (git-ignored) and replace the placeholders.
+# In GitHub Actions the same values are supplied as TF_VAR_* environment
+# variables instead.
+
+# Project and environment
+project_name = "quizx"
+environment  = "dev"
+
+# AWS account and region
+aws_region     = "eu-west-2"
+aws_account_id = "<12-digit-account-id>"
+
+# Terraform state (must match backend.hcl)
+tf_bootstrap_state_bucket_name = "<state-bucket-name>"
+
+# IAM identities
+quizx_iam_user                = "<terraform-iam-user-name>"
+terraform_execution_role_name = "quizx-dev-terraform-execution-role"
+eks_cluster_role_name         = "quizx-dev-eks-cluster-role"
+eks_node_role_name            = "quizx-dev-eks-node-role"
