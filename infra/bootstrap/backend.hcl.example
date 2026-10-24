@@ -1,0 +1,5 @@
+# Copy to backend.hcl (git-ignored) and run:
+#   terraform init -backend-config=backend.hcl
+bucket = "<state-bucket-name>"
+key    = "terraform/quizx/state/bootstrap/terraform.tfstate"
+region = "eu-west-2"
