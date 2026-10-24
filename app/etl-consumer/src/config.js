@@ -1,29 +1,38 @@
+// Converts ETL Consumer environment variables into its SQS and RDS settings.
+// Required values are checked at startup so a misconfigured worker fails fast.
 const DEFAULT_DB_PORT = 3306;
-const DEFAULT_RABBITMQ_PORT = 5672;
-const DEFAULT_PREFETCH = 5;
-const DEFAULT_RECONNECT_DELAY_MS = 5000;
+const DEFAULT_SQS_MAX_MESSAGES = 5;
+const DEFAULT_RETRY_DELAY_MS = 5000;
+const DEFAULT_SQS_WAIT_TIME_SECONDS = 20;
+const DEFAULT_SQS_VISIBILITY_TIMEOUT_SECONDS = 60;
 
 const config = {
   app: {
-    name: 'QuizX ETL Consumer',
-    version: '3.0.0',
-    prefetch: readNumber('QUEUE_PREFETCH', DEFAULT_PREFETCH),
-    reconnectDelayMs: readNumber('RECONNECT_DELAY_MS', DEFAULT_RECONNECT_DELAY_MS)
+    name: "QuizX ETL Consumer",
+    version: "4.0.0",
+    maxMessages: readNumber("SQS_MAX_MESSAGES", DEFAULT_SQS_MAX_MESSAGES),
+    retryDelayMs: readNumber("RETRY_DELAY_MS", DEFAULT_RETRY_DELAY_MS),
   },
   db: {
-    host: readRequired('DB_HOST'),
-    port: readNumber('DB_PORT', DEFAULT_DB_PORT),
-    user: readRequired('DB_USER'),
-    password: readRequired('DB_PASSWORD'),
-    name: readRequired('DB_NAME')
+    host: readRequired("DB_HOST"),
+    port: readNumber("DB_PORT", DEFAULT_DB_PORT),
+    user: readRequired("DB_USER"),
+    password: readRequired("DB_PASSWORD"),
+    name: readRequired("DB_NAME"),
   },
-  rabbitmq: {
-    host: readRequired('RABBITMQ_HOST'),
-    port: readNumber('RABBITMQ_PORT', DEFAULT_RABBITMQ_PORT),
-    user: readRequired('RABBITMQ_USER'),
-    password: readRequired('RABBITMQ_PASSWORD'),
-    queue: readRequired('RABBITMQ_QUEUE')
-  }
+  aws: {
+    region:
+      process.env.AWS_REGION || process.env.AWS_DEFAULT_REGION || "eu-west-2",
+    moderatedQueueName: readRequired("MODERATED_QUESTIONS_QUEUE_NAME"),
+    waitTimeSeconds: readNumber(
+      "SQS_WAIT_TIME_SECONDS",
+      DEFAULT_SQS_WAIT_TIME_SECONDS,
+    ),
+    visibilityTimeoutSeconds: readNumber(
+      "SQS_VISIBILITY_TIMEOUT_SECONDS",
+      DEFAULT_SQS_VISIBILITY_TIMEOUT_SECONDS,
+    ),
+  },
 };
 
 function readRequired(name) {

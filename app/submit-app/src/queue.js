@@ -1,93 +1,73 @@
-const amqp = require('amqplib');
-const config = require('./config');
+// Publishes new questions to the submitted-questions SQS queue. The client and
+// queue URL are created on first use so the server can start before AWS is
+// reachable; the readiness probe reports when the queue is available.
+const {
+  GetQueueAttributesCommand,
+  SendMessageCommand,
+  SQSClient,
+} = require("@aws-sdk/client-sqs");
+const config = require("./config");
+const { resolveQueueUrl } = require("./sqs");
 
-let connection;
-let channel;
-let connecting;
+let sqsClient;
+let submittedQueueUrlPromise;
 
 async function publishSubmission(submission) {
-  const activeChannel = await getChannel();
-  const payload = Buffer.from(JSON.stringify(submission));
-  const accepted = activeChannel.sendToQueue(config.rabbitmq.queue, payload, {
-    contentType: 'application/json',
-    deliveryMode: 2
-  });
+  const queueUrl = await getSubmittedQueueUrl();
 
-  if (!accepted) {
-    await new Promise((resolve) => activeChannel.once('drain', resolve));
-  }
-
-  await activeChannel.waitForConfirms();
+  await getSqsClient().send(
+    new SendMessageCommand({
+      QueueUrl: queueUrl,
+      MessageBody: JSON.stringify(submission),
+    }),
+  );
 }
 
-async function getChannel() {
-  if (channel) {
-    return channel;
-  }
+// A cheap attribute read that proves the queue exists and that the IAM role
+// can reach it.
+async function checkReadiness() {
+  const queueUrl = await getSubmittedQueueUrl();
 
-  if (!connecting) {
-    connecting = connect();
-  }
-
-  try {
-    await connecting;
-  } finally {
-    connecting = undefined;
-  }
-
-  return channel;
+  await getSqsClient().send(
+    new GetQueueAttributesCommand({
+      QueueUrl: queueUrl,
+      AttributeNames: ["QueueArn"],
+    }),
+  );
 }
 
-async function connect() {
-  connection = await amqp.connect(buildRabbitUrl());
-  connection.on('close', resetConnection);
-  connection.on('error', (error) => {
-    console.error('RabbitMQ connection error:', error.message);
-  });
+function getSqsClient() {
+  if (!sqsClient) {
+    sqsClient = new SQSClient({ region: config.aws.region });
+  }
 
-  channel = await connection.createConfirmChannel();
-  channel.on('close', () => {
-    channel = undefined;
-  });
-  channel.on('error', (error) => {
-    console.error('RabbitMQ channel error:', error.message);
-  });
-
-  await channel.assertQueue(config.rabbitmq.queue, {
-    durable: true
-  });
+  return sqsClient;
 }
 
-function buildRabbitUrl() {
-  const user = encodeURIComponent(config.rabbitmq.user);
-  const password = encodeURIComponent(config.rabbitmq.password);
+// Resolves the queue URL once and caches the promise. A failed lookup is
+// cleared so the next call retries instead of reusing the rejection.
+function getSubmittedQueueUrl() {
+  if (!submittedQueueUrlPromise) {
+    submittedQueueUrlPromise = resolveQueueUrl(
+      getSqsClient(),
+      config.aws.submittedQueueName,
+    ).catch((error) => {
+      submittedQueueUrlPromise = undefined;
+      throw error;
+    });
+  }
 
-  return `amqp://${user}:${password}@${config.rabbitmq.host}:${config.rabbitmq.port}`;
-}
-
-function resetConnection() {
-  connection = undefined;
-  channel = undefined;
-  connecting = undefined;
+  return submittedQueueUrlPromise;
 }
 
 async function close() {
-  const activeChannel = channel;
-  const activeConnection = connection;
-
-  resetConnection();
-
-  if (activeChannel) {
-    await activeChannel.close();
-  }
-
-  if (activeConnection) {
-    await activeConnection.close();
-  }
+  sqsClient?.destroy();
+  sqsClient = undefined;
+  submittedQueueUrlPromise = undefined;
 }
 
 module.exports = {
+  checkReadiness,
   close,
-  getChannel,
-  publishSubmission
+  publishSubmission,
 };

@@ -1,15 +1,15 @@
 {
   "name": "submit-app",
-  "version": "3.0.0",
+  "version": "4.0.0",
   "description": "QuizX service for submitting quiz questions and categories.",
   "private": true,
-  "homepage": "https://github.com/jacobsidhu/quizx-aws-discributed-system#readme",
+  "homepage": "https://github.com/jacobsidhu/quizx-aws-distributed-system#readme",
   "bugs": {
-    "url": "https://github.com/jacobsidhu/quizx-aws-discributed-system/issues"
+    "url": "https://github.com/jacobsidhu/quizx-aws-distributed-system/issues"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/jacobsidhu/quizx-aws-discributed-system.git"
+    "url": "git+https://github.com/jacobsidhu/quizx-aws-distributed-system.git"
   },
   "license": "ISC",
   "author": "JacobSidhu",
@@ -18,10 +18,11 @@
   "scripts": {
     "start": "node --env-file=.env server.js",
     "start:prod": "node server.js",
-    "check": "node --check config.js && node --check queue.js && node --check server.js"
+    "check": "node --check config.js && node --check sqs.js && node --check queue.js && node --check server.js && node --check test/sqs.test.js",
+    "test": "node --test test/*.test.js"
   },
   "dependencies": {
-    "amqplib": "^0.10.9",
+    "@aws-sdk/client-sqs": "^3.922.0",
     "express": "^5.2.1"
   }
 }

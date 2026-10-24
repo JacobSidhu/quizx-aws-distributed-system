@@ -1,7 +1,7 @@
 {
   "name": "etl-consumer",
-  "version": "3.0.0",
-  "description": "QuizX RabbitMQ consumer that loads submitted questions into MySQL.",
+  "version": "4.0.0",
+  "description": "QuizX ETL consumer that loads moderator-approved questions into MySQL.",
   "private": true,
   "license": "ISC",
   "author": "JacobSidhu",
@@ -10,10 +10,11 @@
   "scripts": {
     "start": "node --env-file=.env consumer.js",
     "start:prod": "node consumer.js",
-    "check": "node --check config.js && node --check db.js && node --check consumer.js"
+    "check": "node --check config.js && node --check db.js && node --check sqs.js && node --check consumer.js && node --check test/sqs.test.js",
+    "test": "node --test test/*.test.js"
   },
   "dependencies": {
-    "amqplib": "^0.10.9",
+    "@aws-sdk/client-sqs": "^3.922.0",
     "mysql2": "^3.22.4"
   }
 }

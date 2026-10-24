@@ -1,5 +1,7 @@
-const db = require('mysql2/promise');
-const config = require('./config');
+// Shared MySQL connection pool for the ETL Consumer's Amazon RDS transactions.
+// Each message borrows one connection for its transaction and then releases it.
+const db = require("mysql2/promise");
+const config = require("./config");
 
 const pool = db.createPool({
   host: config.db.host,
@@ -9,7 +11,7 @@ const pool = db.createPool({
   database: config.db.name,
   waitForConnections: true,
   connectionLimit: 10,
-  enableKeepAlive: true
+  enableKeepAlive: true,
 });
 
 module.exports = pool;

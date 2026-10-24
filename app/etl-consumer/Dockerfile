@@ -1,3 +1,4 @@
+# Production image for the background ETL Consumer.
 FROM node:24-alpine
 
 WORKDIR /app
