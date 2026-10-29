@@ -1,6 +1,14 @@
-// -----------------------------------------------------------
-// Creates Public Subnet 1 for VPC ---------------------------
-// -----------------------------------------------------------
+# ==============================================================================
+# Subnets
+# ==============================================================================
+# Two public and two private subnets, one of each per availability zone.
+# CIDRs and zones come from var.networking. No subnet assigns public IPs
+# automatically; the EC2 instances request one explicitly (see ec2.tf).
+# ==============================================================================
+
+# ------------------------------------------------------------------------------
+# Public subnets (routed to the internet gateway)
+# ------------------------------------------------------------------------------
 resource "aws_subnet" "public_1" {
   vpc_id                  = aws_vpc.main.id
   cidr_block              = var.networking.public_subnet_cidrs[0]
@@ -9,19 +17,19 @@ resource "aws_subnet" "public_1" {
 
   tags = local.common_tags
 }
-// -----------------------------------------------------------
-// Creates Public Subnet 2 for VPC ---------------------------
-// -----------------------------------------------------------
+
 resource "aws_subnet" "public_2" {
   vpc_id                  = aws_vpc.main.id
   cidr_block              = var.networking.public_subnet_cidrs[1]
   availability_zone       = var.networking.availability_zones[1]
   map_public_ip_on_launch = false
-  tags                    = local.common_tags
+
+  tags = local.common_tags
 }
-// -----------------------------------------------------------
-// Creates Private Subnet 1 for VPC --------------------------
-// -----------------------------------------------------------
+
+# ------------------------------------------------------------------------------
+# Private subnets (no internet route; RDS, EKS, and VPC endpoints)
+# ------------------------------------------------------------------------------
 resource "aws_subnet" "private_1" {
   vpc_id                  = aws_vpc.main.id
   cidr_block              = var.networking.private_subnet_cidrs[0]
@@ -30,9 +38,7 @@ resource "aws_subnet" "private_1" {
 
   tags = local.common_tags
 }
-// -----------------------------------------------------------
-// Creates Private Subnet 2 for VPC --------------------------
-// -----------------------------------------------------------
+
 resource "aws_subnet" "private_2" {
   vpc_id                  = aws_vpc.main.id
   cidr_block              = var.networking.private_subnet_cidrs[1]
@@ -40,12 +46,4 @@ resource "aws_subnet" "private_2" {
   map_public_ip_on_launch = false
 
   tags = local.common_tags
-}
-// -----------------------------------------------------------
-// --------------- RDS Subnet Group --------------------------
-// -----------------------------------------------------------
-resource "aws_db_subnet_group" "rds" {
-  name       = "${local.name_prefix}-rds-subnet-group"
-  subnet_ids = [aws_subnet.private_1.id, aws_subnet.private_2.id]
-  tags       = local.common_tags
 }
