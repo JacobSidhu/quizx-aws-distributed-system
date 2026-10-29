@@ -1,3 +1,17 @@
+# ==============================================================================
+# Custom API domain (optional)
+# ==============================================================================
+# Created only when enable_custom_domain is true. DNS is hosted at GoDaddy,
+# not Route 53, so the deployment workflow publishes the records:
+#
+#   1. Terraform requests an ACM certificate for <api_subdomain>.<domain_name>.
+#   2. The workflow publishes the ACM validation record to GoDaddy
+#      (output: acm_validation_records).
+#   3. Terraform waits for ACM to issue the certificate, then creates the
+#      API Gateway custom domain and maps it to the $default stage.
+#   4. The workflow points a CNAME at the API Gateway domain target
+#      (output: api_gateway_domain_target).
+# ==============================================================================
 resource "aws_acm_certificate" "api" {
   count = var.enable_custom_domain ? 1 : 0
 
@@ -11,8 +25,8 @@ resource "aws_acm_certificate" "api" {
   tags = local.common_tags
 }
 
-# GoDaddy publishes the DNS validation record before the main Terraform apply.
-# This resource waits for ACM to observe that record and issue the certificate.
+# Waits for ACM to observe the GoDaddy validation record and issue the
+# certificate.
 resource "aws_acm_certificate_validation" "api" {
   count = var.enable_custom_domain ? 1 : 0
 
