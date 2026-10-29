@@ -48,5 +48,6 @@ jobs:
         with:
           terraform_version: 1.13.3
 
-      - name: Formatting Terraform
-        run: terraform fmt -check
+      - name: Terraform format (bootstrap)
+        working-directory: infra/bootstrap
+        run: terraform fmt -check -diff -recursive
