@@ -1,26 +1,36 @@
-// ----------------------------------------------------------
-// AWS Application Load Balancer (ALB) configuration                                 
-// ----------------------------------------------------------
+# ==============================================================================
+# Application Load Balancer
+# ==============================================================================
+# Internal ALB that receives traffic only from the API Gateway VPC link and
+# routes it by path:
+#
+#   /submit, /submit/*      ──► submit app    (priority 99)
+#   /question, /question/*  ──► question app  (priority 100)
+#   anything else           ──► question app  (default action)
+# ==============================================================================
 resource "aws_lb" "quizx_alb" {
-  name               = "quizx-alb"
+  name               = "${local.name_prefix}-alb"
   internal           = true
   load_balancer_type = "application"
 
-  security_groups = [
-  aws_security_group.alb_sg.id]
+  security_groups = [aws_security_group.alb_sg.id]
 
   subnets = [
     aws_subnet.public_1.id,
     aws_subnet.public_2.id
   ]
+
+  tags = local.common_tags
 }
 
-// ----------------------------------------------------------
-// Load Balancer Target Group for ALB
-// ----------------------------------------------------------
+# ------------------------------------------------------------------------------
+# Target groups
+# ------------------------------------------------------------------------------
+# One per application, health-checked on /health.
+# ------------------------------------------------------------------------------
 resource "aws_lb_target_group" "quizx_alb_target_group_question_app" {
-  name     = "quizx-alb-tg-question-app"
-  port     = var.question_app_port
+  name     = "${local.name_prefix}-question-app-tg"
+  port     = var.service_ports.question_app
   protocol = "HTTP"
   vpc_id   = aws_vpc.main.id
 
@@ -32,11 +42,13 @@ resource "aws_lb_target_group" "quizx_alb_target_group_question_app" {
     unhealthy_threshold = 2
     matcher             = "200-299"
   }
+
+  tags = local.common_tags
 }
 
 resource "aws_lb_target_group" "quizx_alb_target_group_submit_app" {
-  name     = "quizx-alb-tg-submit-app"
-  port     = var.submit_app_port
+  name     = "${local.name_prefix}-submit-app-tg"
+  port     = var.service_ports.submit_app
   protocol = "HTTP"
   vpc_id   = aws_vpc.main.id
 
@@ -48,26 +60,28 @@ resource "aws_lb_target_group" "quizx_alb_target_group_submit_app" {
     unhealthy_threshold = 2
     matcher             = "200-299"
   }
+
+  tags = local.common_tags
 }
 
 resource "aws_lb_target_group_attachment" "quizx_alb_target_group_attachment_question_app" {
   target_group_arn = aws_lb_target_group.quizx_alb_target_group_question_app.arn
   target_id        = aws_instance.question_app.id
-  port             = var.question_app_port
+  port             = var.service_ports.question_app
 }
 
 resource "aws_lb_target_group_attachment" "quizx_alb_target_group_attachment_submit_app" {
   target_group_arn = aws_lb_target_group.quizx_alb_target_group_submit_app.arn
   target_id        = aws_instance.submit_app.id
-  port             = var.submit_app_port
+  port             = var.service_ports.submit_app
 }
 
-// ----------------------------------------------------------
-// LB Listener for Quizx ALB
-// ----------------------------------------------------------
+# ------------------------------------------------------------------------------
+# Listener and path-based routing rules
+# ------------------------------------------------------------------------------
 resource "aws_lb_listener" "quizx_alb_listener" {
   load_balancer_arn = aws_lb.quizx_alb.arn
-  port              = var.alb_port
+  port              = var.service_ports.alb
   protocol          = "HTTP"
 
   default_action {
