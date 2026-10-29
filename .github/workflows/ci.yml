@@ -43,7 +43,7 @@ jobs:
           role-session-name: quizx-${{github.job}}-${{github.run_id}}
           aws-region: ${{secrets.AWS_REGION}}
 
-  Bootstrap:
+  bootstrap:
     name: Bootstrap Check and Validation
     runs-on: ubuntu-latest
     defaults:
@@ -67,10 +67,14 @@ jobs:
           terraform_version: 1.13.3
 
       - name: Terraform format (bootstrap)
-        working-directory: infra/bootstrap
         run: terraform fmt -check -diff -recursive
 
-  Instructure:
+      - name: Terraform validate (bootstrap)
+        run: |
+          terraform init -backend=false
+          terraform validate
+
+  infrastructure:
     name: IaC Checks And Validation
     runs-on: ubuntu-latest
     defaults:
@@ -94,5 +98,9 @@ jobs:
           terraform_version: 1.13.3
 
       - name: Terraform format (Main IaC)
-        working-directory: infra/terraform
         run: terraform fmt -check -diff -recursive
+
+      - name: Terraform validate (Main IaC)
+        run: |
+          terraform init -backend=false
+          terraform validate
