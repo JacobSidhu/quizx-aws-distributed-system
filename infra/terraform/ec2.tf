@@ -1,4 +1,14 @@
-// Creates EC2 instance
+# ==============================================================================
+# EC2 application servers
+# ==============================================================================
+# The question and submit apps each run on their own instance, one per public
+# subnet and availability zone. user-data.sh installs Docker; the deployment
+# workflow then starts the containers over SSH.
+#
+# The instances have public IPs and route through the internet gateway. This
+# is the current runtime path while the services move to EKS (see eks.tf);
+# application traffic still enters only through API Gateway and the ALB.
+# ==============================================================================
 resource "aws_instance" "question_app" {
   ami                         = var.aws_ami_id
   instance_type               = var.instance_type
@@ -10,9 +20,7 @@ resource "aws_instance" "question_app" {
 
   user_data = file("${path.module}/user-data.sh")
 
-  tags = {
-    Name = "${var.project_name}-question-app"
-  }
+  tags = local.common_tags
 }
 
 resource "aws_instance" "submit_app" {
@@ -26,19 +34,18 @@ resource "aws_instance" "submit_app" {
 
   user_data = file("${path.module}/user-data.sh")
 
-  tags = {
-    Name = "${var.project_name}-submit-app"
-  }
+  tags = local.common_tags
 }
 
-// ----------------------------------------------------------
-// KEY PAIR
-// ----------------------------------------------------------
+# ------------------------------------------------------------------------------
+# SSH key pair
+# ------------------------------------------------------------------------------
+# Registers the operator's public key; the private key never leaves the
+# operator or the deployment workflow's secrets.
+# ------------------------------------------------------------------------------
 resource "aws_key_pair" "quizx_key" {
-  key_name   = coalesce(var.ec2_key_name, "${var.project_name}-ec2-key")
+  key_name   = local.ec2_key_name
   public_key = var.ssh_public_key
 
-  tags = merge(local.common_tags, {
-    Name = coalesce(var.ec2_key_name, "${local.name_prefix}-ec2-key")
-  })
+  tags = local.common_tags
 }
