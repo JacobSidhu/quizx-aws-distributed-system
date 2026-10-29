@@ -1,0 +1,7 @@
+# Copy to backend.hcl (git-ignored) and use it at init time:
+#
+#   terraform init -backend-config=backend.hcl
+#
+bucket = "<state-bucket-name>"
+key    = "<main-state-key>"
+region = "eu-west-2"
