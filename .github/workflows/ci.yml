@@ -43,13 +43,13 @@ jobs:
             const payload = JSON.parse(
               Buffer.from(token.split('.')[1], 'base64url').toString('utf8')
             );
-      
+
             console.log(JSON.stringify({
               issuer: payload.iss,
               audience: payload.aud,
               subject: payload.sub
             }, null, 2));
-            
+
       - name: Configuring AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
