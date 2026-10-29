@@ -1,6 +1,20 @@
-// -----------------------------------------------------------
-// Base security groups --------------------------------------
-// -----------------------------------------------------------
+# ==============================================================================
+# Security groups
+# ==============================================================================
+# Traffic path:
+#
+#   API Gateway VPC link ──► ALB ──► question app / submit app (EC2)
+#                                     submit app ──► question app
+#                                     question app ──► RDS
+#
+# Groups are declared without inline rules where traffic flows between groups;
+# those rules are separate aws_security_group_rule resources below, which
+# avoids circular references between the groups.
+# ==============================================================================
+
+# ------------------------------------------------------------------------------
+# Base groups (rules defined separately below)
+# ------------------------------------------------------------------------------
 resource "aws_security_group" "vpc_link_sg" {
   name        = "${local.name_prefix}-vpc-link-sg"
   description = "Security group for the API Gateway VPC link"
@@ -24,9 +38,17 @@ resource "aws_security_group" "rds_sg" {
 
   tags = local.common_tags
 }
-// -----------------------------------------------------------
-// Question app security group -------------------------------
-// -----------------------------------------------------------
+
+resource "aws_security_group" "vpc_endpoint_sg" {
+  name        = "${local.name_prefix}-vpc-endpoint-sg"
+  description = "Security group for vpc endpoints"
+  vpc_id      = aws_vpc.main.id
+  tags        = local.common_tags
+}
+
+# ------------------------------------------------------------------------------
+# Application servers (SSH and app port from the configured CIDRs)
+# ------------------------------------------------------------------------------
 resource "aws_security_group" "question_app_sg" {
   name        = "${local.name_prefix}-question-app-sg"
   description = "Allow SSH, ALB access, and app-to-app traffic for the question app"
@@ -58,9 +80,7 @@ resource "aws_security_group" "question_app_sg" {
 
   tags = local.common_tags
 }
-// -----------------------------------------------------------
-// Submit app security group ---------------------------------
-// -----------------------------------------------------------
+
 resource "aws_security_group" "submit_app_sg" {
   name        = "${local.name_prefix}-submit-app-sg"
   description = "Allow SSH, ALB access, and app-to-app traffic for the submit app"
@@ -92,9 +112,10 @@ resource "aws_security_group" "submit_app_sg" {
 
   tags = local.common_tags
 }
-// -----------------------------------------------------------
-// ALB and VPC link traffic ----------------------------------
-// -----------------------------------------------------------
+
+# ------------------------------------------------------------------------------
+# VPC link to ALB, and ALB to the applications
+# ------------------------------------------------------------------------------
 resource "aws_security_group_rule" "vpc_link_to_alb_egress" {
   type                     = "egress"
   description              = "Allow the VPC link to reach the ALB"
@@ -134,9 +155,10 @@ resource "aws_security_group_rule" "alb_to_submit_app_egress" {
   security_group_id        = aws_security_group.alb_sg.id
   source_security_group_id = aws_security_group.submit_app_sg.id
 }
-// -----------------------------------------------------------
-// App-to-app and app-to-service access ----------------------
-// -----------------------------------------------------------
+
+# ------------------------------------------------------------------------------
+# Application ingress, app-to-app, and app-to-database access
+# ------------------------------------------------------------------------------
 resource "aws_security_group_rule" "question_app_from_alb" {
   type                     = "ingress"
   description              = "Allow the ALB to access the question app"
@@ -175,4 +197,15 @@ resource "aws_security_group_rule" "question_app_to_rds" {
   protocol                 = "tcp"
   security_group_id        = aws_security_group.rds_sg.id
   source_security_group_id = aws_security_group.question_app_sg.id
+}
+
+# HTTPS from anywhere in the VPC to the interface endpoints.
+resource "aws_security_group_rule" "vpc_endpoint_sg_rules" {
+  type              = "ingress"
+  description       = "Aloow HTTPS from resources inside the VPC"
+  from_port         = 443
+  to_port           = 443
+  protocol          = "tcp"
+  cidr_blocks       = [var.networking.vpc_cidr]
+  security_group_id = aws_security_group.vpc_endpoint_sg.id
 }
