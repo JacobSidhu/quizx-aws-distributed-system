@@ -1,30 +1,103 @@
 name: Continuous Deployment
 
+# Pipeline: bootstrap (IAM) ──► infra (platform, creates ECR) ──► app (images)
+#
+# Each stage authenticates with GitHub OIDC; no long-lived AWS keys are used:
+#   bootstrap  AWS_BOOTSTRAP_ROLE_ARN  manages the project's IAM only
+#   infra/app  AWS_DEPLOY_ROLE_ARN     created by bootstrap; assumes the
+#                                      Terraform execution role, pushes images
+
 on:
   push:
     branches:
       - main
     paths:
-      - "app/moderate/**"
+      - "app/**"
+      - "infra/bootstrap/**"
+      - "infra/terraform/**"
       - ".github/workflows/cd.yml"
   workflow_dispatch:
+    inputs:
+      bootstrap_action:
+        description: "Bootstrap Terraform action"
+        required: true
+        default: plan
+        type: choice
+        options:
+          - plan
+          - apply
+      infra_action:
+        description: "Infrastructure Terraform action"
+        required: true
+        default: plan
+        type: choice
+        options:
+          - plan
+          - apply
 
 permissions:
+  id-token: write
   contents: read
 
+# Never cancel a running deployment: an interrupted terraform apply leaves the
+# state locked and resources half-changed.
 concurrency:
   group: cd-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 env:
   APP_VERSION: 4.0.0
   AWS_REGION: ${{ secrets.AWS_REGION }}
-  ECR_REPOSITORY: quizx-dev-ecr-repository
+  TERRAFORM_VERSION: 1.13.3
 
 jobs:
-  build-and-push:
-    name: Build and push Moderator image
+  changes:
+    name: Detect changes
     runs-on: ubuntu-latest
+    outputs:
+      app: ${{ steps.filter.outputs.app }}
+      bootstrap: ${{ steps.filter.outputs.bootstrap }}
+      infra: ${{ steps.filter.outputs.infra }}
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Filter changed paths
+        id: filter
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            app:
+              - "app/**"
+            bootstrap:
+              - "infra/bootstrap/**"
+            infra:
+              - "infra/terraform/**"
+
+  bootstrap:
+    name: Bootstrap (IAM foundation)
+    needs: changes
+    if: github.event_name == 'workflow_dispatch' || needs.changes.outputs.bootstrap == 'true'
+    runs-on: ubuntu-latest
+    environment: bootstrap
+    defaults:
+      run:
+        working-directory: infra/bootstrap
+
+    env:
+      TF_IN_AUTOMATION: "true"
+      TF_VAR_aws_region: ${{ secrets.AWS_REGION }}
+      TF_VAR_aws_account_id: ${{ secrets.AWS_ACCOUNT_ID }}
+      TF_VAR_tf_bootstrap_state_bucket_name: ${{ secrets.TF_BOOTSTRAP_STATE_BUCKET_NAME }}
+      TF_VAR_tf_bootstrap_state_key: ${{ secrets.TF_BOOTSTRAP_STATE_KEY }}
+      TF_VAR_tf_main_state_bucket_name: ${{ secrets.TF_STATE_BUCKET_NAME }}
+      TF_VAR_tf_main_state_key: ${{ secrets.TF_STATE_FILE_BACKEND_KEY }}
+      TF_VAR_quizx_iam_user: ${{ secrets.QUIZX_IAM_USER }}
+      TF_VAR_terraform_execution_role_name: ${{ secrets.QUIZX_IAM_ROLE }}
+      TF_VAR_eks_cluster_role_name: quizx-dev-eks-cluster-role
+      TF_VAR_eks_node_role_name: quizx-dev-eks-node-role
+      TF_VAR_github_repository: ${{ github.repository }}
 
     steps:
       - name: Check out repository
@@ -33,6 +106,172 @@ jobs:
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          role-to-assume: ${{ secrets.AWS_BOOTSTRAP_ROLE_ARN }}
+          role-session-name: quizx-${{ github.job }}-${{ github.run_id }}
           aws-region: ${{ env.AWS_REGION }}
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TERRAFORM_VERSION }}
+
+      - name: Terraform init
+        run: >-
+          terraform init -input=false
+          -backend-config="bucket=${{ secrets.TF_BOOTSTRAP_STATE_BUCKET_NAME }}"
+          -backend-config="key=${{ secrets.TF_BOOTSTRAP_STATE_KEY }}"
+          -backend-config="region=${{ env.AWS_REGION }}"
+
+      - name: Terraform validate
+        run: terraform validate
+
+      - name: Terraform plan
+        run: terraform plan -input=false -out=tfplan
+
+      # Pushes to main apply automatically; manual runs apply only when
+      # "apply" is selected. Add required reviewers to the "bootstrap"
+      # environment to gate this step.
+      - name: Terraform apply
+        if: github.event_name == 'push' || inputs.bootstrap_action == 'apply'
+        run: terraform apply -input=false tfplan
+
+  infra:
+    name: Infrastructure (platform)
+    needs: [changes, bootstrap]
+    # Runs after bootstrap succeeds, or when bootstrap had nothing to do.
+    if: >-
+      always() && !cancelled() && needs.bootstrap.result != 'failure' &&
+      (github.event_name == 'workflow_dispatch' ||
+      needs.changes.outputs.bootstrap == 'true' ||
+      needs.changes.outputs.infra == 'true' ||
+      needs.changes.outputs.app == 'true')
+    runs-on: ubuntu-latest
+    environment: infrastructure
+    defaults:
+      run:
+        working-directory: infra/terraform
+    outputs:
+      ecr_repository_name: ${{ steps.ecr.outputs.name }}
+
+    env:
+      TF_IN_AUTOMATION: "true"
+      TF_VAR_aws_region: ${{ secrets.AWS_REGION }}
+      TF_VAR_aws_account_id: ${{ secrets.AWS_ACCOUNT_ID }}
+      TF_VAR_terraform_execution_role_name: ${{ secrets.QUIZX_IAM_ROLE }}
+      TF_VAR_bootstrap_state_bucket_name: ${{ secrets.TF_BOOTSTRAP_STATE_BUCKET_NAME }}
+      TF_VAR_bootstrap_state_file_key: ${{ secrets.TF_BOOTSTRAP_STATE_KEY }}
+      TF_VAR_aws_ami_id: ${{ secrets.AWS_AMI_ID }}
+      TF_VAR_ssh_public_key: ${{ secrets.SSH_PUBLIC_KEY }}
+      TF_VAR_rds_master_password: ${{ secrets.RDS_MASTER_PASSWORD }}
+      TF_VAR_public_route_config: '{ cidr_block = "0.0.0.0/0" }'
+      TF_VAR_access: >-
+        {
+        ssh_cidr = "${{ secrets.ALLOWED_SSH_CIDR }}",
+        question_app_cidr = "${{ secrets.QUESTION_APP_CIDR }}",
+        submit_app_cidr = "${{ secrets.SUBMIT_APP_CIDR }}"
+        }
+      TF_VAR_service_ports: >-
+        { ssh = 22, question_app = 4000, submit_app = 4200,
+        alb = 80, rds = 3306, vpc_link = 80 }
+      # The custom domain needs the GoDaddy DNS steps in deploy.yml, so CD
+      # leaves it disabled.
+      TF_VAR_enable_custom_domain: "false"
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          role-session-name: quizx-${{ github.job }}-${{ github.run_id }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TERRAFORM_VERSION }}
+          terraform_wrapper: false
+
+      - name: Terraform init
+        run: >-
+          terraform init -input=false
+          -backend-config="bucket=${{ secrets.TF_STATE_BUCKET_NAME }}"
+          -backend-config="key=${{ secrets.TF_STATE_FILE_BACKEND_KEY }}"
+          -backend-config="region=${{ env.AWS_REGION }}"
+
+      - name: Terraform validate
+        run: terraform validate
+
+      # The plan file holds secret values, so it never leaves the runner.
+      - name: Terraform plan
+        if: >-
+          github.event_name == 'workflow_dispatch' ||
+          needs.changes.outputs.bootstrap == 'true' ||
+          needs.changes.outputs.infra == 'true'
+        run: terraform plan -input=false -out=tfplan
+
+      # Pushes to main apply when infrastructure or IAM changed; manual runs
+      # apply only when "apply" is selected.
+      - name: Terraform apply
+        if: >-
+          (github.event_name == 'push' &&
+          (needs.changes.outputs.bootstrap == 'true' ||
+          needs.changes.outputs.infra == 'true')) ||
+          inputs.infra_action == 'apply'
+        run: terraform apply -input=false tfplan
+
+      - name: Read ECR repository name
+        id: ecr
+        run: |
+          if ! name=$(terraform output -raw ecr_repository_name 2>/dev/null) || [ -z "$name" ]; then
+            echo "::error::ECR repository not found in state. Apply infra/terraform first (run this workflow with infra_action=apply)."
+            exit 1
+          fi
+          echo "name=$name" >> "$GITHUB_OUTPUT"
+
+  app:
+    name: Build and push ${{ matrix.service }} image
+    needs: [changes, infra]
+    if: >-
+      always() && !cancelled() && needs.infra.result == 'success' &&
+      (github.event_name == 'workflow_dispatch' || needs.changes.outputs.app == 'true')
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        service:
+          - question-app
+          - submit-app
+          - etl-consumer
+          - moderate
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          role-session-name: quizx-${{ github.job }}-${{ github.run_id }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Log in to Amazon ECR
+        id: ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # The repository has immutable tags, so every image gets a unique
+      # "<service>-<version>-<commit>" tag that is never overwritten.
+      - name: Build and push image
+        uses: docker/build-push-action@v6
+        with:
+          context: app/${{ matrix.service }}
+          push: true
+          tags: ${{ steps.ecr.outputs.registry }}/${{ needs.infra.outputs.ecr_repository_name }}:${{ matrix.service }}-${{ env.APP_VERSION }}-${{ github.sha }}
+          cache-from: type=gha,scope=${{ matrix.service }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.service }}
