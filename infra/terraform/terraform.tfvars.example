@@ -1,34 +1,58 @@
-public_subnet_1_cidr = "10.0.1.0/24"
-public_subnet_2_cidr = "10.0.2.0/24"
+# Copy to terraform.tfvars (git-ignored) and replace the placeholders.
+# In CI the same values are supplied as TF_VAR_* environment variables.
 
-project_name        = "your-project-name"
-aws_region          = "eu-west-2"
-availability_zone_1 = "eu-west-2a"
-availability_zone_2 = "eu-west-2b"
+# Project and environment
+project_name = "quizx"
+environment  = "dev"
+managedby    = "Terraform"
 
-# Network configuration
-vpc_cidr                 = "10.0.0.0/16"
-vpc_enable_dns_support   = true
-vpc_enable_dns_hostnames = true
-public_route_config      = { cidr_block = "0.0.0.0/0" }
+# AWS account and region
+aws_region     = "eu-west-2"
+aws_account_id = "<12-digit-account-id>"
 
-# Documentation-only TEST-NET address. Replace it with your trusted public
-# IPv4 address and a /32 prefix before planning or applying.
-allowed_ssh_cidr  = "203.0.113.10/32"
-question_app_cidr = "203.0.113.10/32"
-submit_app_cidr   = "203.0.113.10/32"
+# Execution role and bootstrap state (both created by infra/bootstrap)
+terraform_execution_role_name = "quizx-dev-terraform-execution-role"
+bootstrap_state_bucket_name   = "<state-bucket-name>"
+bootstrap_state_file_key      = "<bootstrap-state-key>"
 
-ssh_port          = 22
-question_app_port = 4000
-submit_app_port   = 4200
+# Networking (optional: these are the defaults)
+networking = {
+  vpc_cidr             = "10.0.0.0/16"
+  enable_dns_support   = true
+  enable_dns_hostnames = true
+  availability_zones   = ["eu-west-2a", "eu-west-2b"]
+  public_subnet_cidrs  = ["10.0.1.0/24", "10.0.2.0/24"]
+  private_subnet_cidrs = ["10.0.3.0/24", "10.0.4.0/24"]
+}
 
-# Instance configuration
-aws_ami_id     = "ami-xxxxxxxxxxxxxxxxx"
+public_route_config = { cidr_block = "0.0.0.0/0" }
+
+# External access. 203.0.113.10 is a documentation-only address: replace it
+# with your own public IPv4 address as a /32.
+access = {
+  ssh_cidr          = "203.0.113.10/32"
+  question_app_cidr = "203.0.113.10/32"
+  submit_app_cidr   = "203.0.113.10/32"
+}
+
+service_ports = {
+  ssh          = 22
+  question_app = 4000
+  submit_app   = 4200
+  alb          = 80
+  rds          = 3306
+  vpc_link     = 80
+}
+
+# EC2 application servers (Ubuntu AMI)
 instance_type  = "t3.micro"
-ec2_key_name   = "quizx-ec2-key-unique-name"
+aws_ami_id     = "ami-xxxxxxxxxxxxxxxxx"
 ssh_public_key = "ssh-ed25519 AAAA... your-key-comment"
 
-# Custom API domain. deploy.yml fixes these values to quizx.lecux.com.
-enable_custom_domain = true
-domain_name          = "lecux.com"
+# RDS
+rds_master_password = "<strong-password>"
+
+# Custom API domain (optional)
+enable_custom_domain = false
+domain_name          = "example.com"
 api_subdomain        = "quizx"
