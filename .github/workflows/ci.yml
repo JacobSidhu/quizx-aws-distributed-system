@@ -47,3 +47,6 @@ jobs:
         uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: 1.13.3
+
+      - name: Formatting Terraform
+        run: terraform fmt -check
