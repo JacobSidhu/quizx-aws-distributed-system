@@ -43,6 +43,21 @@ jobs:
           role-session-name: quizx-${{github.job}}-${{github.run_id}}
           aws-region: ${{secrets.AWS_REGION}}
 
+  Terraform:
+    name: Bootstrap Check and Validation
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: infra/bootstrap
+
+    steps:
+      - name: Configuring AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{secrets.AWS_BOOTSTRAP_ROLE_ARN}}
+          role-session-name: quizx-${{github.job}}-${{github.run_id}}
+          aws-region: ${{secrets.AWS_REGION}}
+
       - name: Set up Terraform
         uses: hashicorp/setup-terraform@v3
         with:
