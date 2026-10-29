@@ -43,7 +43,7 @@ jobs:
           role-session-name: quizx-${{github.job}}-${{github.run_id}}
           aws-region: ${{secrets.AWS_REGION}}
 
-  Terraform:
+  Bootstrap:
     name: Bootstrap Check and Validation
     runs-on: ubuntu-latest
     defaults:
@@ -68,4 +68,31 @@ jobs:
 
       - name: Terraform format (bootstrap)
         working-directory: infra/bootstrap
+        run: terraform fmt -check -diff -recursive
+
+  Instructure:
+    name: IaC Checks And Validation
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: infra/terraform
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configuring AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{secrets.AWS_BOOTSTRAP_ROLE_ARN}}
+          role-session-name: quizx-${{github.job}}-${{github.run_id}}
+          aws-region: ${{secrets.AWS_REGION}}
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.13.3
+
+      - name: Terraform format (Main IaC)
+        working-directory: infra/terraform
         run: terraform fmt -check -diff -recursive
