@@ -42,3 +42,4 @@ jobs:
           role-to-assume: ${{secrets.AWS_BOOTSTRAP_ROLE_ARN}}
           role-session-name: quizx-${{github.job}}-${{github.run_id}}
           aws-region: ${{secrets.AWS_REGION}}
+          retry-max-attemps: 1
